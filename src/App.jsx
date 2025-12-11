@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Camera, Upload, Trash2, DollarSign, Calendar, Tag, TrendingUp, PieChart, Search } from 'lucide-react';
+import { Camera, Upload, Trash2, DollarSign, Calendar, Tag, TrendingUp, PieChart, Search, AlertCircle } from 'lucide-react';
+import Tesseract from 'tesseract.js';
 
 const App = () => {
   const [receipts, setReceipts] = useState([]);
   const [view, setView] = useState('scan');
   const [scanning, setScanning] = useState(false);
+  const [scanProgress, setScanProgress] = useState(0);
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [dateFilter, setDateFilter] = useState('all');
@@ -21,6 +23,40 @@ const App = () => {
     Entertainment: 'bg-pink-500',
     Utilities: 'bg-yellow-500',
     Other: 'bg-gray-500'
+  };
+
+  // Merchant to category mapping
+  const merchantCategories = {
+    // Groceries
+    'walmart': 'Groceries', 'target': 'Groceries', 'kroger': 'Groceries', 
+    'safeway': 'Groceries', 'whole foods': 'Groceries', 'trader joe': 'Groceries',
+    'costco': 'Groceries', 'aldi': 'Groceries', 'publix': 'Groceries',
+    
+    // Dining
+    'mcdonald': 'Dining', 'burger king': 'Dining', 'subway': 'Dining',
+    'starbucks': 'Dining', 'pizza': 'Dining', 'restaurant': 'Dining',
+    'cafe': 'Dining', 'coffee': 'Dining', 'food': 'Dining',
+    
+    // Transport
+    'uber': 'Transport', 'lyft': 'Transport', 'gas': 'Transport',
+    'shell': 'Transport', 'chevron': 'Transport', 'exxon': 'Transport',
+    'bp': 'Transport', 'parking': 'Transport',
+    
+    // Shopping
+    'amazon': 'Shopping', 'ebay': 'Shopping', 'best buy': 'Shopping',
+    'macy': 'Shopping', 'nordstrom': 'Shopping', 'mall': 'Shopping',
+    
+    // Healthcare
+    'pharmacy': 'Healthcare', 'cvs': 'Healthcare', 'walgreens': 'Healthcare',
+    'clinic': 'Healthcare', 'hospital': 'Healthcare', 'medical': 'Healthcare',
+    
+    // Entertainment
+    'cinema': 'Entertainment', 'theater': 'Entertainment', 'movie': 'Entertainment',
+    'spotify': 'Entertainment', 'netflix': 'Entertainment', 'gym': 'Entertainment',
+    
+    // Utilities
+    'electric': 'Utilities', 'water': 'Utilities', 'utility': 'Utilities',
+    'internet': 'Utilities', 'phone': 'Utilities'
   };
 
   useEffect(() => {
@@ -47,37 +83,177 @@ const App = () => {
     }
   };
 
+  const categorizeByMerchant = (merchantName) => {
+    const lowerMerchant = merchantName.toLowerCase();
+    for (const [keyword, category] of Object.entries(merchantCategories)) {
+      if (lowerMerchant.includes(keyword)) {
+        return category;
+      }
+    }
+    return 'Other';
+  };
+
   const processReceipt = async (file) => {
     setScanning(true);
+    setScanProgress(0);
     
     try {
-      const base64 = await new Promise((resolve, reject) => {
+      // Convert file to base64 for storage
+      const base64Image = await new Promise((resolve, reject) => {
         const reader = new FileReader();
-        reader.onload = () => resolve(reader.result.split(',')[1]);
+        reader.onload = () => resolve(reader.result);
         reader.onerror = reject;
         reader.readAsDataURL(file);
       });
 
-      const response = await fetch('/api/scan-receipt', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          image: base64,
-          mediaType: file.type
-        })
-      });
+      // Run OCR with progress tracking
+      const result = await Tesseract.recognize(
+        file,
+        'eng',
+        {
+          logger: (m) => {
+            if (m.status === 'recognizing text') {
+              setScanProgress(Math.round(m.progress * 100));
+            }
+          }
+        }
+      );
 
-      const data = await response.json();
-      const text = data.content.map(c => c.text || '').join('');
-      const cleanText = text.replace(/```json|```/g, '').trim();
-      const receiptData = JSON.parse(cleanText);
+      const text = result.data.text;
+      console.log('Extracted text:', text);
+
+      // Parse the receipt text
+      const lines = text.split('\n').filter(line => line.trim().length > 2);
+      
+      // Find merchant (usually first non-empty line or line with most capital letters)
+      let merchant = 'Unknown Store';
+      for (let i = 0; i < Math.min(5, lines.length); i++) {
+        const line = lines[i].trim();
+        if (line.length > 3 && line.length < 50) {
+          merchant = line;
+          break;
+        }
+      }
+
+      // Find date (look for common date patterns)
+      let date = new Date().toISOString().split('T')[0];
+      const datePatterns = [
+        /\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}/,
+        /\d{4}[\/\-]\d{1,2}[\/\-]\d{1,2}/,
+        /\w{3,9}\s+\d{1,2},?\s+\d{4}/i
+      ];
+      
+      for (const line of lines) {
+        for (const pattern of datePatterns) {
+          const match = line.match(pattern);
+          if (match) {
+            try {
+              const parsedDate = new Date(match[0]);
+              if (!isNaN(parsedDate.getTime())) {
+                date = parsedDate.toISOString().split('T')[0];
+                break;
+              }
+            } catch (e) {
+              // Continue if date parsing fails
+            }
+          }
+        }
+      }
+
+      // Find total (look for "total" keyword or largest amount)
+      let total = 0;
+      const amountRegex = /\$?\s*(\d+[,.]?\d*\.?\d{2})/g;
+      const totalKeywords = ['total', 'amount due', 'balance', 'grand total'];
+      
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i].toLowerCase();
+        const hasKeyword = totalKeywords.some(keyword => line.includes(keyword));
+        
+        if (hasKeyword) {
+          const amounts = [...line.matchAll(amountRegex)];
+          if (amounts.length > 0) {
+            const amount = amounts[amounts.length - 1][1].replace(/[,$]/g, '');
+            total = parseFloat(amount);
+            break;
+          }
+        }
+      }
+
+      // If no total found with keyword, find the largest amount
+      if (total === 0) {
+        const allAmounts = [];
+        for (const line of lines) {
+          const amounts = [...line.matchAll(amountRegex)];
+          amounts.forEach(match => {
+            const amount = parseFloat(match[1].replace(/[,$]/g, ''));
+            if (!isNaN(amount) && amount > 0) {
+              allAmounts.push(amount);
+            }
+          });
+        }
+        if (allAmounts.length > 0) {
+          total = Math.max(...allAmounts);
+        }
+      }
+
+      // Extract items with prices
+      const items = [];
+      for (const line of lines) {
+        const amounts = [...line.matchAll(amountRegex)];
+        if (amounts.length > 0) {
+          const price = parseFloat(amounts[amounts.length - 1][1].replace(/[,$]/g, ''));
+          if (!isNaN(price) && price > 0 && price <= total) {
+            let itemName = line.substring(0, line.lastIndexOf(amounts[amounts.length - 1][0])).trim();
+            
+            // Clean up item name
+            itemName = itemName.replace(/^\d+\s*x?\s*/i, ''); // Remove leading numbers/quantity
+            itemName = itemName.replace(/[^a-zA-Z0-9\s\-']/g, ' ').trim(); // Remove special chars
+            
+            if (itemName.length > 2 && itemName.length < 50) {
+              // Check for quantity
+              const qtyMatch = line.match(/(\d+)\s*x/i);
+              const quantity = qtyMatch ? parseInt(qtyMatch[1]) : 1;
+              
+              items.push({
+                name: itemName || 'Item',
+                price: price,
+                quantity: quantity
+              });
+            }
+          }
+        }
+      }
+
+      // If no items found, create one generic item with the total
+      if (items.length === 0 && total > 0) {
+        items.push({
+          name: 'Purchase',
+          price: total,
+          quantity: 1
+        });
+      }
+
+      // Remove duplicate items and items that are likely subtotals/tax
+      const uniqueItems = [];
+      const seenPrices = new Set();
+      for (const item of items) {
+        if (!seenPrices.has(item.price) || item.price < 1) {
+          uniqueItems.push(item);
+          seenPrices.add(item.price);
+        }
+      }
+
+      // Auto-categorize based on merchant
+      const category = categorizeByMerchant(merchant);
 
       const newReceipt = {
         id: Date.now(),
-        ...receiptData,
-        image: URL.createObjectURL(file),
+        merchant: merchant,
+        date: date,
+        total: total || 0,
+        items: uniqueItems.slice(0, 20), // Limit to 20 items
+        category: category,
+        image: base64Image,
         addedDate: new Date().toISOString()
       };
 
@@ -86,9 +262,10 @@ const App = () => {
       setView('list');
     } catch (error) {
       console.error('Error processing receipt:', error);
-      alert('Error processing receipt. Please try again.');
+      alert('Error processing receipt. Please try again or try a clearer photo.');
     } finally {
       setScanning(false);
+      setScanProgress(0);
     }
   };
 
@@ -140,6 +317,7 @@ const App = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+      {/* Header */}
       <div className="bg-white shadow-lg">
         <div className="max-w-6xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
@@ -157,6 +335,7 @@ const App = () => {
         </div>
       </div>
 
+      {/* Navigation */}
       <div className="max-w-6xl mx-auto px-4 py-4">
         <div className="bg-white rounded-lg shadow-md p-2 flex gap-2">
           <button
@@ -190,6 +369,7 @@ const App = () => {
       </div>
 
       <div className="max-w-6xl mx-auto px-4 pb-8">
+        {/* Scan View */}
         {view === 'scan' && (
           <div className="bg-white rounded-lg shadow-lg p-8">
             <div className="text-center">
@@ -197,7 +377,22 @@ const App = () => {
                 <Upload className="mx-auto text-indigo-600" size={64} />
               </div>
               <h2 className="text-2xl font-bold text-gray-800 mb-2">Scan Your Receipt</h2>
-              <p className="text-gray-600 mb-8">Upload a photo and let AI extract the details</p>
+              <p className="text-gray-600 mb-4">Upload a photo and AI will extract the details</p>
+              
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6 text-left">
+                <div className="flex items-start gap-2">
+                  <AlertCircle className="text-blue-600 flex-shrink-0 mt-0.5" size={20} />
+                  <div className="text-sm text-blue-800">
+                    <p className="font-medium mb-1">Tips for best results:</p>
+                    <ul className="list-disc list-inside space-y-1 text-blue-700">
+                      <li>Use good lighting</li>
+                      <li>Keep receipt flat and centered</li>
+                      <li>Avoid shadows and glare</li>
+                      <li>Make sure text is clearly visible</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
               
               <label className="inline-block">
                 <input
@@ -212,7 +407,7 @@ const App = () => {
                   {scanning ? (
                     <>
                       <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                      Processing...
+                      Processing... {scanProgress}%
                     </>
                   ) : (
                     <>
@@ -222,12 +417,26 @@ const App = () => {
                   )}
                 </div>
               </label>
+
+              {scanning && (
+                <div className="mt-6">
+                  <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+                    <div 
+                      className="bg-indigo-600 h-3 transition-all duration-300 rounded-full"
+                      style={{ width: `${scanProgress}%` }}
+                    ></div>
+                  </div>
+                  <p className="text-sm text-gray-600 mt-2">Scanning receipt with AI...</p>
+                </div>
+              )}
             </div>
           </div>
         )}
 
+        {/* List View */}
         {view === 'list' && (
           <div>
+            {/* Filters */}
             <div className="bg-white rounded-lg shadow-md p-4 mb-4">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="relative">
@@ -264,6 +473,7 @@ const App = () => {
               </div>
             </div>
 
+            {/* Receipts Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {getFilteredReceipts().map(receipt => (
                 <div key={receipt.id} className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-xl transition-shadow">
@@ -285,6 +495,7 @@ const App = () => {
                       </div>
                     </div>
                     
+                    {/* Items List */}
                     <div className="mb-3 border-t pt-3">
                       <button
                         onClick={() => setExpandedReceipt(expandedReceipt === receipt.id ? null : receipt.id)}
@@ -332,6 +543,7 @@ const App = () => {
           </div>
         )}
 
+        {/* Analytics View */}
         {view === 'analytics' && (
           <div className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
