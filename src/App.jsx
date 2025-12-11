@@ -58,7 +58,6 @@ const App = () => {
         reader.readAsDataURL(file);
       });
 
-      // Call our backend API instead of directly calling Anthropic
       const response = await fetch('/api/scan-receipt', {
         method: 'POST',
         headers: {
@@ -141,7 +140,6 @@ const App = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-      {/* Header */}
       <div className="bg-white shadow-lg">
         <div className="max-w-6xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
@@ -159,7 +157,6 @@ const App = () => {
         </div>
       </div>
 
-      {/* Navigation */}
       <div className="max-w-6xl mx-auto px-4 py-4">
         <div className="bg-white rounded-lg shadow-md p-2 flex gap-2">
           <button
@@ -193,7 +190,6 @@ const App = () => {
       </div>
 
       <div className="max-w-6xl mx-auto px-4 pb-8">
-        {/* Scan View */}
         {view === 'scan' && (
           <div className="bg-white rounded-lg shadow-lg p-8">
             <div className="text-center">
@@ -230,10 +226,8 @@ const App = () => {
           </div>
         )}
 
-        {/* List View */}
         {view === 'list' && (
           <div>
-            {/* Filters */}
             <div className="bg-white rounded-lg shadow-md p-4 mb-4">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="relative">
@@ -270,7 +264,6 @@ const App = () => {
               </div>
             </div>
 
-            {/* Receipts Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {getFilteredReceipts().map(receipt => (
                 <div key={receipt.id} className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-xl transition-shadow">
@@ -292,7 +285,6 @@ const App = () => {
                       </div>
                     </div>
                     
-                    {/* Items List */}
                     <div className="mb-3 border-t pt-3">
                       <button
                         onClick={() => setExpandedReceipt(expandedReceipt === receipt.id ? null : receipt.id)}
@@ -340,7 +332,6 @@ const App = () => {
           </div>
         )}
 
-        {/* Analytics View */}
         {view === 'analytics' && (
           <div className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
