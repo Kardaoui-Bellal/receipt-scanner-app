@@ -258,7 +258,7 @@ const App = () => {
   };
 
   const deleteReceipt = (id) => {
-    if (confirm('Are you sure you want to delete this receipt?')) {
+    if (window.confirm('Are you sure you want to delete this receipt?')) {
       const updatedReceipts = receipts.filter(r => r.id !== id);
       saveReceipts(updatedReceipts);
       setExpandedReceipt(null);
@@ -439,7 +439,7 @@ const App = () => {
                 </label>
 
                 {scanning && (
-                  <div className="mt-8 animate-fadeIn">
+                  <div className="mt-8">
                     <div className="w-full bg-gray-200 rounded-full h-4 overflow-hidden shadow-inner">
                       <div 
                         className="bg-gradient-to-r from-indigo-600 to-purple-600 h-4 transition-all duration-300 rounded-full relative overflow-hidden"
@@ -549,7 +549,7 @@ const App = () => {
                       </button>
                       
                       {expandedReceipt === receipt.id && (
-                        <div className="space-y-2 max-h-48 overflow-y-auto bg-gray-50 rounded-xl p-3 animate-fadeIn">
+                        <div className="space-y-2 max-h-48 overflow-y-auto bg-gray-50 rounded-xl p-3">
                           {receipt.items.map((item, idx) => (
                             <div key={idx} className="flex justify-between items-center text-sm py-2 border-b border-gray-200 last:border-0">
                               <div className="flex-1">
@@ -632,9 +632,7 @@ const App = () => {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-orange-100 text-sm font-medium mb-2">Average</p>
-                    <p className="text-5xl font-bold mb-1">
-                      ${stats.count > 0 ? (stats.total / stats.count).toFixed(2) : '0.00'}
-                    </p>
+                    <p className="text-5xl font-bold mb-1">${stats.count > 0 ? (stats.total / stats.count).toFixed(2) : '0.00'}</p>
                     <p className="text-orange-100 text-xs">Per receipt</p>
                   </div>
                   <TrendingUp className="opacity-20" size={64} />
@@ -668,10 +666,7 @@ const App = () => {
                             </div>
                           </div>
                           <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden shadow-inner">
-                            <div
-                              className={`h-3 rounded-full ${colors[category]} transition-all duration-500 group-hover:shadow-lg`}
-                              style={{ width: `${percentage}%` }}
-                            ></div>
+                            <div className={`h-3 rounded-full ${colors[category]} transition-all duration-500 group-hover:shadow-lg`} style={{ width: `${percentage}%` }}></div>
                           </div>
                         </div>
                       );
@@ -690,72 +685,41 @@ const App = () => {
 
       {/* Image Preview Modal */}
       {previewImage && (
-        <div 
-          className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fadeIn"
-          onClick={() => setPreviewImage(null)}
-        >
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setPreviewImage(null)}>
           <div className="relative max-w-4xl max-h-[90vh] bg-white rounded-2xl overflow-hidden shadow-2xl">
-            <button
-              onClick={() => setPreviewImage(null)}
-              className="absolute top-4 right-4 bg-white/90 backdrop-blur-sm p-2 rounded-full hover:bg-white transition-colors z-10"
-            >
+            <button onClick={() => setPreviewImage(null)} className="absolute top-4 right-4 bg-white/90 backdrop-blur-sm p-2 rounded-full hover:bg-white transition-colors z-10">
               <X size={24} className="text-gray-800" />
             </button>
-            <img 
-              src={previewImage} 
-              alt="Receipt preview" 
-              className="w-full h-full object-contain"
-              onClick={(e) => e.stopPropagation()}
-            />
+            <img src={previewImage} alt="Receipt preview" className="w-full h-full object-contain" onClick={(e) => e.stopPropagation()} />
           </div>
         </div>
       )}
 
       {/* Edit Receipt Modal */}
       {editingReceipt && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fadeIn">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
             <h3 className="text-2xl font-bold mb-6 text-gray-800">Edit Receipt</h3>
             
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Merchant</label>
-                <input
-                  type="text"
-                  value={editingReceipt.merchant}
-                  onChange={(e) => setEditingReceipt({...editingReceipt, merchant: e.target.value})}
-                  className="w-full px-4 py-2 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                />
+                <input type="text" value={editingReceipt.merchant} onChange={(e) => setEditingReceipt({...editingReceipt, merchant: e.target.value})} className="w-full px-4 py-2 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" />
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Date</label>
-                <input
-                  type="date"
-                  value={editingReceipt.date}
-                  onChange={(e) => setEditingReceipt({...editingReceipt, date: e.target.value})}
-                  className="w-full px-4 py-2 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                />
+                <input type="date" value={editingReceipt.date} onChange={(e) => setEditingReceipt({...editingReceipt, date: e.target.value})} className="w-full px-4 py-2 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" />
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Total</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  value={editingReceipt.total}
-                  onChange={(e) => setEditingReceipt({...editingReceipt, total: parseFloat(e.target.value)})}
-                  className="w-full px-4 py-2 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                />
+                <input type="number" step="0.01" value={editingReceipt.total} onChange={(e) => setEditingReceipt({...editingReceipt, total: parseFloat(e.target.value)})} className="w-full px-4 py-2 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" />
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Category</label>
-                <select
-                  value={editingReceipt.category}
-                  onChange={(e) => setEditingReceipt({...editingReceipt, category: e.target.value})}
-                  className="w-full px-4 py-2 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                >
+                <select value={editingReceipt.category} onChange={(e) => setEditingReceipt({...editingReceipt, category: e.target.value})} className="w-full px-4 py-2 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                   {categories.map(cat => (
                     <option key={cat} value={cat}>{categoryIcons[cat]} {cat}</option>
                   ))}
@@ -764,22 +728,19 @@ const App = () => {
             </div>
 
             <div className="flex gap-3 mt-6">
-              <button
-                onClick={() => {
-                  updateReceipt(editingReceipt.id, editingReceipt);
-                }}
-                className="flex-1 bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-3 rounded-xl font-semibold hover:shadow-lg transition-all flex items-center justify-center gap-2"
-              >
+              <button onClick={() => updateReceipt(editingReceipt.id, editingReceipt)} className="flex-1 bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-3 rounded-xl font-semibold hover:shadow-lg transition-all flex items-center justify-center gap-2">
                 <Check size={20} />
                 Save Changes
               </button>
-              <button
-                onClick={() => setEditingReceipt(null)}
-                className="flex-1 bg-gray-100 text-gray-700 py-3 rounded-xl font-semibold hover:bg-gray-200 transition-all"
-              >
+              <button onClick={() => setEditingReceipt(null)} className="flex-1 bg-gray-100 text-gray-700 py-3 rounded-xl font-semibold hover:bg-gray-200 transition-all">
                 Cancel
               </button>
             </div>
           </div>
         </div>
       )}
+    </div>
+  );
+};
+
+export default App;
