@@ -247,13 +247,13 @@ const App = () => {
     <div className="min-h-screen">
       <div className="max-w-5xl mx-auto pb-24 px-4">
         {/* Header */}
-        <div className="bg-white px-0 py-4 sticky top-0 z-10 shadow-lg border-b border-gray-200">
+        <div className="bg-white px-0 py-5 sticky top-0 z-10 shadow-md border-b border-neutral-200">
           <div className="flex items-center justify-between">
-            <h1 className="text-2xl font-black text-gray-900">
+            <h1 className="text-3xl font-black text-neutral-900">
               {view === 'list' ? 'Receipts' : 'Analytics'}
             </h1>
             {view === 'list' && (
-              <label aria-label="Add receipt" className="cursor-pointer bg-gradient-to-r from-purple-500 to-pink-500 text-white w-12 h-12 rounded-2xl flex items-center justify-center hover:shadow-lg transition-all">
+              <label aria-label="Add receipt" className="cursor-pointer bg-gradient-to-r from-indigo-600 to-blue-600 text-white w-12 h-12 rounded-xl flex items-center justify-center hover:shadow-lg hover:from-indigo-700 hover:to-blue-700 transition-all active:scale-95">
                 <Plus size={24} strokeWidth={3} />
                 <input type="file" accept="image/*" capture="environment" onChange={handleFileUpload} className="hidden" disabled={scanning} />
               </label>
@@ -261,19 +261,19 @@ const App = () => {
           </div>
           
           {view === 'list' && (
-            <div className="mt-4 space-y-3">
+            <div className="mt-5 space-y-4">
               <div className="relative">
-                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-neutral-400" size={20} />
                 <input
                   type="text"
-                  placeholder="Search"
+                  placeholder="Search receipts..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="w-full pl-12 pr-4 pill-input"
                 />
               </div>
               <div className="filter-pills">
-                <button className={`pill ${selectedCategory === 'all' ? 'pill-active' : ''}`} onClick={() => setSelectedCategory('all')}>All</button>
+                <button className={`pill ${selectedCategory === 'all' ? 'pill-active' : ''}`} onClick={() => setSelectedCategory('all')}>All Receipts</button>
                 {categories.map(cat => (
                   <button key={cat} className={`pill ${selectedCategory === cat ? 'pill-active' : ''}`} onClick={() => setSelectedCategory(cat)}>{cat}</button>
                 ))}
@@ -287,77 +287,76 @@ const App = () => {
           {view === 'list' && (
             <div className="space-y-4 mt-6">
               {scanning && (
-                <div className="bg-gradient-to-r from-purple-500 to-pink-500 rounded-3xl p-6 shadow-xl text-white">
+                <div className="bg-gradient-to-r from-indigo-600 to-blue-600 rounded-xl p-6 shadow-lg text-white">
                   <div className="flex items-center gap-4 mb-3">
                     <div className="animate-spin rounded-full h-10 w-10 border-4 border-white border-t-transparent"></div>
                     <div>
-                      <p className="font-bold">✨ AI Processing...</p>
+                      <p className="font-bold text-lg">Processing Receipt</p>
                       <p className="text-sm opacity-90">{scanProgress}% complete</p>
                     </div>
                   </div>
-                  <div className="w-full bg-white/30 rounded-full h-3">
-                    <div className="bg-white h-3 rounded-full transition-all shadow-lg" style={{ width: `${scanProgress}%` }}></div>
+                  <div className="w-full bg-white/30 rounded-full h-2.5">
+                    <div className="bg-white h-2.5 rounded-full transition-all shadow-lg" style={{ width: `${scanProgress}%` }}></div>
                   </div>
                 </div>
               )}
 
               {filteredReceipts.map(receipt => (
                 <div key={receipt.id} className="tile overflow-hidden">
-                  <div className="tile-body flex gap-4">
-                    {/* Smaller Thumbnail */}
+                  <div className="tile-body flex gap-6">
+                    {/* Thumbnail */}
                     <div 
-                      className="flex-shrink-0 w-20 h-28 bg-gradient-to-br from-gray-100 to-gray-200 rounded-2xl overflow-hidden cursor-pointer hover:scale-105 transition-transform shadow-md"
+                      className="flex-shrink-0 w-24 h-32 bg-gradient-to-br from-neutral-200 to-neutral-300 rounded-lg overflow-hidden cursor-pointer hover:shadow-lg transition-all"
                       onClick={() => setPreviewImage(receipt.image)}
                     >
-                      <img src={receipt.image} alt="Receipt" className="w-full h-full object-cover" style={{ maxWidth: '80px', maxHeight: '112px', objectFit: 'cover' }} />
+                      <img src={receipt.image} alt="Receipt" className="w-full h-full object-cover" />
                     </div>
 
                     {/* Details */}
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-start justify-between mb-2">
+                      <div className="flex items-start justify-between mb-3">
                         <div className="flex-1">
-                          <h3 className="text-lg font-black text-gray-900 truncate">{receipt.merchant}</h3>
-                          <p className="text-sm text-gray-500 flex items-center gap-2">
+                          <h3 className="text-lg font-bold text-neutral-900">{receipt.merchant}</h3>
+                          <p className="text-sm text-neutral-500 flex items-center gap-2 mt-1">
                             <Calendar size={14} />
-                            {new Date(receipt.date).toLocaleDateString('en-US', { day: 'numeric', month: 'short' })}
+                            {new Date(receipt.date).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })}
                           </p>
                         </div>
                         <div className="flex gap-2">
-                          <button onClick={() => setEditingReceipt(receipt)} className="p-2 hover:bg-purple-50 rounded-xl transition-colors">
-                            <Edit3 size={16} className="text-purple-500" strokeWidth={2} />
+                          <button onClick={() => setEditingReceipt(receipt)} className="p-2 hover:bg-indigo-50 rounded-lg transition-colors">
+                            <Edit3 size={16} className="text-indigo-600" strokeWidth={2} />
                           </button>
-                          <button onClick={() => deleteReceipt(receipt.id)} className="p-2 hover:bg-red-50 rounded-xl transition-colors">
-                            <Trash2 size={16} className="text-red-500" strokeWidth={2} />
+                          <button onClick={() => deleteReceipt(receipt.id)} className="p-2 hover:bg-red-50 rounded-lg transition-colors">
+                            <Trash2 size={16} className="text-red-600" strokeWidth={2} />
                           </button>
                         </div>
                       </div>
                       
-                      <p className="text-2xl font-extrabold text-gray-900 mb-3">
+                      <p className="text-2xl font-black text-neutral-900 mb-3">
                         ${receipt.total.toFixed(2)}
                       </p>
                       
                       <div className="flex items-center gap-2">
                         <span className={`badge ${categoryColors[receipt.category].light} ${categoryColors[receipt.category].text.replace('text-', 'text-')} border`}>
                           <span>{categoryIcons[receipt.category]}</span>
-                          <span className="font-bold">{receipt.category}</span>
+                          <span className="font-semibold">{receipt.category}</span>
                         </span>
-                        <span className="text-xs text-gray-500 font-semibold">{receipt.itemCount?.toLocaleString()}</span>
                         {Array.isArray(receipt.items) && receipt.items.length > 0 && (
-                          <button onClick={() => setExpandedReceipt(expandedReceipt === receipt.id ? null : receipt.id)} className="text-xs font-bold text-gray-500 underline ml-auto">
-                            {expandedReceipt === receipt.id ? 'Hide items' : 'View items'}
+                          <button onClick={() => setExpandedReceipt(expandedReceipt === receipt.id ? null : receipt.id)} className="text-xs font-semibold text-indigo-600 hover:text-indigo-700 ml-auto underline">
+                            {expandedReceipt === receipt.id ? 'Hide' : `View (${receipt.items.length})`}
                           </button>
                         )}
                       </div>
                       {expandedReceipt === receipt.id && Array.isArray(receipt.items) && receipt.items.length > 0 && (
-                        <div className="list-bordered mt-2">
-                          {receipt.items.slice(0, 6).map((it, idx) => (
+                        <div className="list-bordered mt-4">
+                          {receipt.items.slice(0, 5).map((it, idx) => (
                             <div key={idx} className="list-item">
-                              <span className="text-sm font-medium text-gray-700 truncate">{it.name}</span>
-                              <span className="text-sm font-bold text-gray-900">${Number(it.price).toFixed(2)}</span>
+                              <span className="text-sm font-medium text-neutral-700 truncate">{it.name}</span>
+                              <span className="text-sm font-bold text-neutral-900">${Number(it.price).toFixed(2)}</span>
                             </div>
                           ))}
-                          {receipt.items.length > 6 && (
-                            <div className="px-4 py-2 text-xs text-gray-500">+ {receipt.items.length - 6} more</div>
+                          {receipt.items.length > 5 && (
+                            <div className="px-6 py-3 text-xs text-neutral-500 bg-neutral-50">+ {receipt.items.length - 5} more items</div>
                           )}
                         </div>
                       )}
@@ -367,18 +366,17 @@ const App = () => {
               ))}
 
               {filteredReceipts.length === 0 && !scanning && (
-                <div className="py-16">
-                  <div className="soft-card p-8 text-center">
-                    <div className="w-28 h-28 bg-gradient-to-br from-purple-100 to-pink-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                      <Receipt size={52} className="text-purple-500" strokeWidth={2.5} />
+                <div className="py-20">
+                  <div className="soft-card p-12 text-center">
+                    <div className="w-32 h-32 bg-gradient-to-br from-indigo-100 to-blue-100 rounded-2xl flex items-center justify-center mx-auto mb-8">
+                      <Receipt size={64} className="text-indigo-600" strokeWidth={1.5} />
                     </div>
-                    <h2 className="text-3xl font-black headline-gradient mb-2">ReceiptScan</h2>
-                    <p className="text-gray-500 font-semibold mb-8">Scan, Save & Track Your Expenses</p>
-                    <label className="inline-block cursor-pointer bg-gradient-to-r from-purple-500 to-pink-500 text-white px-10 py-4 rounded-2xl font-bold hover:shadow-xl transition-all">
-                      Get Started
+                    <h2 className="text-4xl font-black text-neutral-900 mb-3">No Receipts Yet</h2>
+                    <p className="text-neutral-600 font-medium mb-10 text-lg">Start scanning your receipts to track your expenses</p>
+                    <label className="inline-block cursor-pointer bg-gradient-to-r from-indigo-600 to-blue-600 text-white px-12 py-4 rounded-lg font-bold hover:shadow-xl hover:from-indigo-700 hover:to-blue-700 transition-all active:scale-95">
+                      Scan Receipt
                       <input type="file" accept="image/*" capture="environment" onChange={handleFileUpload} className="hidden" />
                     </label>
-                    <p className="text-sm text-gray-400 mt-4">Already have receipts? Add one to begin.</p>
                   </div>
                 </div>
               )}
