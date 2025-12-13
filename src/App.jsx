@@ -217,13 +217,13 @@ const App = () => {
   const filteredReceipts = getFilteredReceipts();
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
+    <div className="min-h-screen">
       <div className="max-w-md mx-auto pb-24">
         {/* Header */}
-        <div className="bg-white/80 backdrop-blur-xl px-6 py-6 sticky top-0 z-10 shadow-lg">
-          <div className="flex items-center justify-between mb-4">
-            <h1 className="text-3xl font-black headline-gradient">
-              {view === 'list' ? 'My Receipts' : 'Analytics'}
+        <div className="bg-white/80 backdrop-blur-xl px-6 py-4 sticky top-0 z-10 shadow-lg border-b border-gray-200">
+          <div className="flex items-center justify-between">
+            <h1 className="text-2xl font-black text-gray-900">
+              {view === 'list' ? 'Receipts' : 'Analytics'}
             </h1>
             {view === 'list' && (
               <div className="flex items-center gap-2">
@@ -237,7 +237,7 @@ const App = () => {
           </div>
           
           {view === 'list' && (
-            <div className="relative">
+            <div className="relative mt-3">
               <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
               <input
                 type="text"
@@ -246,6 +246,12 @@ const App = () => {
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full pl-12 pr-4 pill-input"
               />
+              <div className="filter-pills mt-3">
+                <button className={`pill ${selectedCategory === 'all' ? 'pill-active' : ''}`} onClick={() => setSelectedCategory('all')}>All</button>
+                {categories.map(cat => (
+                  <button key={cat} className={`pill ${selectedCategory === cat ? 'pill-active' : ''}`} onClick={() => setSelectedCategory(cat)}>{cat}</button>
+                ))}
+              </div>
             </div>
           )}
         </div>
@@ -270,8 +276,8 @@ const App = () => {
               )}
 
               {filteredReceipts.map(receipt => (
-                <div key={receipt.id} className="soft-card hover:shadow-xl transition-all overflow-hidden">
-                  <div className="flex gap-4 p-5">
+                <div key={receipt.id} className="tile overflow-hidden">
+                  <div className="tile-body flex gap-4">
                     {/* Smaller Thumbnail */}
                     <div 
                       className="flex-shrink-0 w-20 h-28 bg-gradient-to-br from-gray-100 to-gray-200 rounded-2xl overflow-hidden cursor-pointer hover:scale-105 transition-transform shadow-md"
@@ -300,14 +306,14 @@ const App = () => {
                         </div>
                       </div>
                       
-                      <p className="text-3xl font-black bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent mb-3">
+                      <p className="text-2xl font-extrabold text-gray-900 mb-3">
                         ${receipt.total.toFixed(2)}
                       </p>
                       
                       <div className="flex items-center gap-2">
-                        <span className={`${categoryColors[receipt.category].bg} text-white px-3 py-1.5 rounded-full text-xs font-bold shadow-md flex items-center gap-1`}>
+                        <span className={`badge ${categoryColors[receipt.category].light} ${categoryColors[receipt.category].text.replace('text-', 'text-')} border`}>
                           <span>{categoryIcons[receipt.category]}</span>
-                          {receipt.category}
+                          <span className="font-bold">{receipt.category}</span>
                         </span>
                         <span className="text-xs text-gray-500 font-semibold">{receipt.itemCount?.toLocaleString()}</span>
                         {Array.isArray(receipt.items) && receipt.items.length > 0 && (
@@ -317,17 +323,15 @@ const App = () => {
                         )}
                       </div>
                       {expandedReceipt === receipt.id && Array.isArray(receipt.items) && receipt.items.length > 0 && (
-                        <div className="bg-gray-50 rounded-2xl p-3 border border-gray-100">
-                          <ul className="space-y-2">
-                            {receipt.items.slice(0, 6).map((it, idx) => (
-                              <li key={idx} className="flex items-center justify-between">
-                                <span className="text-sm font-medium text-gray-700 truncate">{it.name}</span>
-                                <span className="text-sm font-bold text-gray-900">${Number(it.price).toFixed(2)}</span>
-                              </li>
-                            ))}
-                          </ul>
+                        <div className="list-bordered mt-2">
+                          {receipt.items.slice(0, 6).map((it, idx) => (
+                            <div key={idx} className="list-item">
+                              <span className="text-sm font-medium text-gray-700 truncate">{it.name}</span>
+                              <span className="text-sm font-bold text-gray-900">${Number(it.price).toFixed(2)}</span>
+                            </div>
+                          ))}
                           {receipt.items.length > 6 && (
-                            <p className="text-xs text-gray-500 mt-2">+ {receipt.items.length - 6} more</p>
+                            <div className="px-4 py-2 text-xs text-gray-500">+ {receipt.items.length - 6} more</div>
                           )}
                         </div>
                       )}
@@ -357,75 +361,88 @@ const App = () => {
 
           {view === 'analytics' && (
             <div className="space-y-6 mt-6">
-              {/* Total Spent Card - light with green change */}
-              <div className="soft-card p-8 relative overflow-hidden">
-                <div className="flex items-center justify-between mb-2">
-                  <p className="text-sm font-bold text-gray-500">Total Spent</p>
-                  <span className={`font-bold text-sm flex items-center gap-1 ${stats.percentChange >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                    {stats.percentChange >= 0 ? <ArrowUp size={16} /> : <ArrowDown size={16} />}
+              {/* KPI Tiles */}
+              <div className="grid grid-cols-3 gap-3">
+                <div className="kpi">
+                  <span className="text-xs font-bold text-gray-500">Total</span>
+                  <span className="text-2xl font-black text-gray-900">${stats.total.toFixed(2)}</span>
+                </div>
+                <div className="kpi">
+                  <span className="text-xs font-bold text-gray-500">Avg</span>
+                  <span className="text-2xl font-black text-gray-900">${stats.count > 0 ? (stats.total / stats.count).toFixed(2) : '0.00'}</span>
+                </div>
+                <div className="kpi">
+                  <span className="text-xs font-bold text-gray-500">Receipts</span>
+                  <span className="text-2xl font-black text-gray-900">{stats.count}</span>
+                </div>
+              </div>
+
+              {/* Distribution & Trend Panel */}
+              <div className="tile">
+                <div className="tile-header">
+                  <h3 className="section-title">Distribution & Trend</h3>
+                  <span className={`badge ${stats.percentChange >= 0 ? 'badge-green' : 'badge-orange'}`}>
+                    {stats.percentChange >= 0 ? <ArrowUp size={14} /> : <ArrowDown size={14} />}
                     {Math.abs(stats.percentChange).toFixed(1)}%
                   </span>
                 </div>
-                <p className="text-5xl font-black text-gray-900">${stats.total.toFixed(2)}</p>
-              </div>
-
-              {/* Donut + Trend combined like mockup */}
-              <div className="soft-card p-6">
-                <div className="grid grid-cols-3 gap-6 items-center">
-                  {/* Donut */}
-                  <div className="col-span-1 flex items-center justify-center">
-                    <div className="relative w-32 h-32">
-                      {stats.total > 0 && Object.values(stats.byCategory).some(v => v > 0) ? (
-                        <svg viewBox="0 0 100 100" className="transform -rotate-90">
-                          {Object.entries(stats.byCategory)
-                            .filter(([_, amount]) => amount > 0)
-                            .reduce((acc, [category, amount]) => {
-                              const pct = stats.total > 0 ? (amount / stats.total) * 100 : 0;
-                              const prev = acc.length ? acc[acc.length - 1].cumulative : 0;
-                              acc.push({ category, percentage: pct, cumulative: prev + pct, color: categoryColors[category].hex });
-                              return acc;
-                            }, [])
-                            .map((seg, i) => {
-                              const dash = `${seg.percentage} ${100 - seg.percentage}`;
-                              const offset = 25 - (i > 0 ? seg.cumulative - seg.percentage : 0);
-                              return (
-                                <circle key={seg.category} cx="50" cy="50" r="15.9" fill="none" stroke={seg.color} strokeWidth="12" strokeDasharray={dash} strokeDashoffset={offset} />
-                              );
-                            })}
-                        </svg>
-                      ) : (
-                        <div className="w-24 h-24 rounded-full bg-gray-100" />
-                      )}
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <p className="text-sm font-bold text-gray-700">{stats.count} receipts</p>
+                <div className="tile-body">
+                  <div className="grid grid-cols-3 gap-6 items-center">
+                    <div className="col-span-1 flex items-center justify-center">
+                      <div className="relative w-32 h-32">
+                        {stats.total > 0 && Object.values(stats.byCategory).some(v => v > 0) ? (
+                          <svg viewBox="0 0 100 100" className="transform -rotate-90">
+                            {Object.entries(stats.byCategory)
+                              .filter(([_, amount]) => amount > 0)
+                              .reduce((acc, [category, amount]) => {
+                                const pct = stats.total > 0 ? (amount / stats.total) * 100 : 0;
+                                const prev = acc.length ? acc[acc.length - 1].cumulative : 0;
+                                acc.push({ category, percentage: pct, cumulative: prev + pct, color: categoryColors[category].hex });
+                                return acc;
+                              }, [])
+                              .map((seg, i) => {
+                                const dash = `${seg.percentage} ${100 - seg.percentage}`;
+                                const offset = 25 - (i > 0 ? seg.cumulative - seg.percentage : 0);
+                                return (
+                                  <circle key={seg.category} cx="50" cy="50" r="15.9" fill="none" stroke={seg.color} strokeWidth="12" strokeDasharray={dash} strokeDashoffset={offset} />
+                                );
+                              })}
+                          </svg>
+                        ) : (
+                          <div className="w-24 h-24 rounded-full bg-gray-100" />
+                        )}
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <p className="text-sm font-bold text-gray-700">{stats.count} receipts</p>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                  {/* Trend */}
-                  <div className="col-span-2">
-                    <div className="h-24 relative">
-                      <svg viewBox="0 0 200 100" className="w-full h-full">
-                        <path d="M0 70 C 30 40, 60 80, 90 50 S 150 60, 200 40" stroke="#A855F7" strokeWidth="3" fill="none" />
-                        <path d="M0 72 C 30 42, 60 82, 90 52 S 150 62, 200 42" stroke="#EC4899" strokeWidth="2" fill="none" opacity="0.3" />
-                      </svg>
-                    </div>
-                    <div className="flex justify-between mt-2 text-xs text-gray-500 font-semibold">
-                      <span>1</span>
-                      <span>2</span>
-                      <span>3</span>
-                      <span>4</span>
-                      <span>5</span>
-                      <span>6</span>
-                      <span>7</span>
+                    <div className="col-span-2">
+                      <div className="h-24 relative">
+                        <svg viewBox="0 0 200 100" className="w-full h-full">
+                          <path d="M0 70 C 30 40, 60 80, 90 50 S 150 60, 200 40" stroke="#334155" strokeWidth="2.5" fill="none" />
+                        </svg>
+                        <div className="absolute inset-x-0 bottom-0 h-px bg-gray-200"></div>
+                      </div>
+                      <div className="flex justify-between mt-2 text-xs text-gray-500 font-semibold">
+                        <span>1</span>
+                        <span>2</span>
+                        <span>3</span>
+                        <span>4</span>
+                        <span>5</span>
+                        <span>6</span>
+                        <span>7</span>
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
 
-              {/* Category Breakdown */}
-              <div className="soft-card p-6">
-                <h3 className="text-xl font-black text-gray-900 mb-6">Category breakdown</h3>
-                <div className="space-y-4">
+              {/* Category Breakdown Panel */}
+              <div className="tile">
+                <div className="tile-header">
+                  <h3 className="section-title">Category Breakdown</h3>
+                </div>
+                <div className="tile-body space-y-4">
                   {Object.entries(stats.byCategory)
                     .filter(([_, amount]) => amount > 0)
                     .sort((a, b) => b[1] - a[1])
@@ -483,7 +500,7 @@ const App = () => {
         {previewImage && (
           <div className="fixed inset-0 bg-black/95 z-50 flex items-center justify-center p-4" onClick={() => setPreviewImage(null)}>
             <div className="relative w-full max-w-2xl">
-              <button onClick={() => setPreviewImage(null)} className="absolute -top-14 right-0 text-white bg-white/10 hover:bg-white/20 rounded-full p-3">
+              <button onClick={() => setPreviewImage(null)} aria-label="Close preview" className="absolute -top-14 right-0 text-white bg-white/10 hover:bg-white/20 rounded-full p-3 focus:ring-2 focus:ring-white/50">
                 <X size={28} strokeWidth={2.5} />
               </button>
               <img src={previewImage} alt="Receipt" className="w-full h-auto max-h-[85vh] object-contain rounded-2xl" onClick={(e) => e.stopPropagation()} />
@@ -498,8 +515,9 @@ const App = () => {
               <h3 className="text-2xl font-black bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent mb-6">Edit Receipt</h3>
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-2">Merchant</label>
+                  <label className="block text-sm font-bold text-gray-700 mb-2" htmlFor="merchant">Merchant</label>
                   <input
+                    id="merchant"
                     type="text"
                     value={editingReceipt.merchant}
                     onChange={(e) => setEditingReceipt({ ...editingReceipt, merchant: e.target.value })}
@@ -507,8 +525,9 @@ const App = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-2">Amount</label>
+                  <label className="block text-sm font-bold text-gray-700 mb-2" htmlFor="amount">Amount</label>
                   <input
+                    id="amount"
                     type="number"
                     step="0.01"
                     value={editingReceipt.total}
@@ -517,8 +536,9 @@ const App = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-2">Category</label>
+                  <label className="block text-sm font-bold text-gray-700 mb-2" htmlFor="category">Category</label>
                   <select
+                    id="category"
                     value={editingReceipt.category}
                     onChange={(e) => setEditingReceipt({ ...editingReceipt, category: e.target.value })}
                     className="w-full px-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-purple-500 font-medium"
@@ -530,10 +550,10 @@ const App = () => {
                 </div>
               </div>
               <div className="flex gap-3 mt-6">
-                <button onClick={() => updateReceipt(editingReceipt.id, editingReceipt)} className="flex-1 bg-gradient-to-r from-purple-500 to-pink-500 text-white py-4 rounded-2xl font-bold hover:shadow-xl transition-all">
+                <button onClick={() => updateReceipt(editingReceipt.id, editingReceipt)} className="flex-1 bg-gradient-to-r from-purple-500 to-pink-500 text-white py-4 rounded-2xl font-bold hover:shadow-xl transition-all focus:ring-2 focus:ring-purple-300">
                   Save
                 </button>
-                <button onClick={() => setEditingReceipt(null)} className="flex-1 bg-gray-100 py-4 rounded-2xl font-bold hover:bg-gray-200 transition-all">
+                <button onClick={() => setEditingReceipt(null)} className="flex-1 bg-gray-100 py-4 rounded-2xl font-bold hover:bg-gray-200 transition-all focus:ring-2 focus:ring-gray-300">
                   Cancel
                 </button>
               </div>

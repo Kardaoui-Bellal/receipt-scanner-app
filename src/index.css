@@ -10,7 +10,7 @@ html, body, #root {
 body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background: radial-gradient(1200px 600px at 50% -100px, rgb(248 250 252) 0%, rgb(250 245 255) 40%, rgb(253 242 248) 100%);
+  background: #f8fafc;
 }
 
 /* Soft card shadows and rounded corners */
@@ -31,6 +31,50 @@ body {
 /* Bottom nav blur and border */
 .blur-nav {
   @apply bg-white/80 backdrop-blur-xl border-t border-gray-200 shadow-lg;
+}
+
+/* Design System additions */
+.tile {
+  @apply bg-white border border-gray-200 rounded-2xl shadow-sm;
+}
+.tile-header {
+  @apply px-4 py-3 border-b border-gray-200 flex items-center justify-between;
+}
+.tile-body {
+  @apply p-4;
+}
+.kpi {
+  @apply tile p-6 flex flex-col gap-1;
+}
+.section {
+  @apply max-w-md mx-auto px-4;
+}
+.section-title {
+  @apply text-xl font-bold text-gray-900;
+}
+.badge {
+  @apply inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold border;
+}
+.badge-green { @apply bg-green-50 text-green-700 border-green-200; }
+.badge-blue { @apply bg-blue-50 text-blue-700 border-blue-200; }
+.badge-purple { @apply bg-purple-50 text-purple-700 border-purple-200; }
+.badge-orange { @apply bg-orange-50 text-orange-700 border-orange-200; }
+.badge-pink { @apply bg-pink-50 text-pink-700 border-pink-200; }
+
+.list-bordered {
+  @apply divide-y divide-gray-200 border border-gray-200 rounded-2xl overflow-hidden;
+}
+.list-item {
+  @apply flex items-center justify-between px-4 py-3;
+}
+.filter-pills {
+  @apply flex gap-2 flex-wrap;
+}
+.pill {
+  @apply px-3 py-1.5 rounded-full border border-gray-200 text-sm font-semibold bg-white hover:bg-gray-50 cursor-pointer;
+}
+.pill-active {
+  @apply bg-gray-900 text-white border-gray-900;
 }
 
 body {
