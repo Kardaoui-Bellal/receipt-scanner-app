@@ -200,7 +200,7 @@ const App = () => {
         {/* Header */}
         <div className="bg-white/80 backdrop-blur-xl px-6 py-6 sticky top-0 z-10 shadow-lg">
           <div className="flex items-center justify-between mb-4">
-            <h1 className="text-3xl font-black bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+            <h1 className="text-3xl font-black headline-gradient">
               {view === 'list' ? 'My Receipts' : 'Analytics'}
             </h1>
             {view === 'list' && (
@@ -221,7 +221,7 @@ const App = () => {
                 placeholder="Search receipts..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-12 pr-4 py-3 bg-white rounded-2xl focus:outline-none focus:ring-2 focus:ring-purple-500 font-medium shadow-sm border border-gray-100"
+                className="w-full pl-12 pr-4 pill-input"
               />
             </div>
           )}
@@ -247,7 +247,7 @@ const App = () => {
               )}
 
               {filteredReceipts.map(receipt => (
-                <div key={receipt.id} className="bg-white rounded-3xl shadow-lg hover:shadow-xl transition-all overflow-hidden border-2 border-gray-100">
+                <div key={receipt.id} className="soft-card hover:shadow-xl transition-all overflow-hidden">
                   <div className="flex gap-4 p-5">
                     {/* Smaller Thumbnail */}
                     <div 
@@ -294,16 +294,19 @@ const App = () => {
               ))}
 
               {filteredReceipts.length === 0 && !scanning && (
-                <div className="text-center py-20">
-                  <div className="w-24 h-24 bg-gradient-to-br from-purple-100 to-pink-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                    <Receipt size={48} className="text-purple-500" strokeWidth={2} />
+                <div className="py-16">
+                  <div className="soft-card p-8 text-center">
+                    <div className="w-28 h-28 bg-gradient-to-br from-purple-100 to-pink-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                      <Receipt size={52} className="text-purple-500" strokeWidth={2.5} />
+                    </div>
+                    <h2 className="text-3xl font-black headline-gradient mb-2">ReceiptScan</h2>
+                    <p className="text-gray-500 font-semibold mb-8">Scan, Save & Track Your Expenses</p>
+                    <label className="inline-block cursor-pointer bg-gradient-to-r from-purple-500 to-pink-500 text-white px-10 py-4 rounded-2xl font-bold hover:shadow-xl transition-all">
+                      Get Started
+                      <input type="file" accept="image/*" capture="environment" onChange={handleFileUpload} className="hidden" />
+                    </label>
+                    <p className="text-sm text-gray-400 mt-4">Already have receipts? Add one to begin.</p>
                   </div>
-                  <h3 className="text-2xl font-black text-gray-900 mb-2">No receipts yet</h3>
-                  <p className="text-gray-500 mb-8">Start scanning to track your expenses</p>
-                  <label className="inline-block cursor-pointer bg-gradient-to-r from-purple-500 to-pink-500 text-white px-8 py-4 rounded-2xl font-bold hover:shadow-xl transition-all">
-                    📸 Scan First Receipt
-                    <input type="file" accept="image/*" capture="environment" onChange={handleFileUpload} className="hidden" />
-                  </label>
                 </div>
               )}
             </div>
@@ -311,66 +314,69 @@ const App = () => {
 
           {view === 'analytics' && (
             <div className="space-y-6 mt-6">
-              {/* Total Spent Card */}
-              <div className="bg-gradient-to-br from-purple-500 via-pink-500 to-red-500 rounded-3xl p-8 shadow-2xl text-white relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16"></div>
-                <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/10 rounded-full -ml-12 -mb-12"></div>
-                <div className="relative">
-                  <div className="flex items-center justify-between mb-2">
-                    <p className="text-sm font-bold opacity-90">Total Spent</p>
-                    <DollarSign size={32} className="opacity-20" />
-                  </div>
-                  <p className="text-5xl font-black mb-3">${stats.total.toFixed(2)}</p>
-                  <div className="flex items-center gap-2">
-                    <ArrowUp size={20} strokeWidth={3} />
-                    <p className="text-sm font-bold">{Math.abs(stats.percentChange).toFixed(1)}% vs last month</p>
-                  </div>
+              {/* Total Spent Card - light with green change */}
+              <div className="soft-card p-8 relative overflow-hidden">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-sm font-bold text-gray-500">Total Spent</p>
+                  <span className="text-green-600 font-bold text-sm flex items-center gap-1">
+                    <ArrowUp size={16} /> {Math.abs(stats.percentChange).toFixed(1)}%
+                  </span>
                 </div>
+                <p className="text-5xl font-black text-gray-900">${stats.total.toFixed(2)}</p>
               </div>
 
-              {/* Quick Stats Grid */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="bg-white rounded-3xl p-6 shadow-lg border-2 border-blue-100">
-                  <div className="w-12 h-12 bg-blue-100 rounded-2xl flex items-center justify-center mb-3">
-                    <Receipt size={24} className="text-blue-500" strokeWidth={2.5} />
+              {/* Donut + Trend combined like mockup */}
+              <div className="soft-card p-6">
+                <div className="grid grid-cols-3 gap-6 items-center">
+                  {/* Donut */}
+                  <div className="col-span-1 flex items-center justify-center">
+                    <div className="relative w-32 h-32">
+                      <svg viewBox="0 0 100 100" className="transform -rotate-90">
+                        {Object.entries(stats.byCategory)
+                          .filter(([_, amount]) => amount > 0)
+                          .reduce((acc, [category, amount]) => {
+                            const pct = stats.total > 0 ? (amount / stats.total) * 100 : 0;
+                            const prev = acc.length ? acc[acc.length - 1].cumulative : 0;
+                            acc.push({ category, percentage: pct, cumulative: prev + pct, color: categoryColors[category].hex });
+                            return acc;
+                          }, [])
+                          .map((seg, i) => {
+                            const dash = `${seg.percentage} ${100 - seg.percentage}`;
+                            const offset = 25 - (i > 0 ? seg.cumulative - seg.percentage : 0);
+                            return (
+                              <circle key={seg.category} cx="50" cy="50" r="15.9" fill="none" stroke={seg.color} strokeWidth="12" strokeDasharray={dash} strokeDashoffset={offset} />
+                            );
+                          })}
+                      </svg>
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <p className="text-sm font-bold text-gray-700">{stats.count} receipts</p>
+                      </div>
+                    </div>
                   </div>
-                  <p className="text-3xl font-black text-gray-900">{stats.count}</p>
-                  <p className="text-sm font-bold text-gray-500">Receipts</p>
-                </div>
-                <div className="bg-white rounded-3xl p-6 shadow-lg border-2 border-green-100">
-                  <div className="w-12 h-12 bg-green-100 rounded-2xl flex items-center justify-center mb-3">
-                    <BarChart3 size={24} className="text-green-500" strokeWidth={2.5} />
+                  {/* Trend */}
+                  <div className="col-span-2">
+                    <div className="h-24 relative">
+                      <svg viewBox="0 0 200 100" className="w-full h-full">
+                        <path d="M0 70 C 30 40, 60 80, 90 50 S 150 60, 200 40" stroke="#A855F7" strokeWidth="3" fill="none" />
+                        <path d="M0 72 C 30 42, 60 82, 90 52 S 150 62, 200 42" stroke="#EC4899" strokeWidth="2" fill="none" opacity="0.3" />
+                      </svg>
+                    </div>
+                    <div className="flex justify-between mt-2 text-xs text-gray-500 font-semibold">
+                      <span>1</span>
+                      <span>2</span>
+                      <span>3</span>
+                      <span>4</span>
+                      <span>5</span>
+                      <span>6</span>
+                      <span>7</span>
+                    </div>
                   </div>
-                  <p className="text-3xl font-black text-gray-900">${stats.count > 0 ? (stats.total / stats.count).toFixed(0) : '0'}</p>
-                  <p className="text-sm font-bold text-gray-500">Average</p>
-                </div>
-              </div>
-
-              {/* Spending Chart Visualization */}
-              <div className="bg-white rounded-3xl p-6 shadow-lg border-2 border-gray-100">
-                <div className="flex items-center justify-between mb-6">
-                  <h3 className="text-xl font-black text-gray-900">Monthly Trend</h3>
-                  <PieChart size={24} className="text-purple-500" />
-                </div>
-                <div className="h-32 flex items-end justify-between gap-2">
-                  {[65, 45, 80, 60, 90, 70, 85].map((height, i) => (
-                    <div key={i} className="flex-1 bg-gradient-to-t from-purple-500 to-pink-500 rounded-t-xl transition-all hover:opacity-80" style={{ height: `${height}%` }}></div>
-                  ))}
-                </div>
-                <div className="flex justify-between mt-3 text-xs text-gray-500 font-semibold">
-                  <span>Mon</span>
-                  <span>Tue</span>
-                  <span>Wed</span>
-                  <span>Thu</span>
-                  <span>Fri</span>
-                  <span>Sat</span>
-                  <span>Sun</span>
                 </div>
               </div>
 
               {/* Category Breakdown */}
-              <div className="bg-white rounded-3xl p-6 shadow-lg border-2 border-gray-100">
-                <h3 className="text-xl font-black text-gray-900 mb-6">Category Breakdown</h3>
+              <div className="soft-card p-6">
+                <h3 className="text-xl font-black text-gray-900 mb-6">Category breakdown</h3>
                 <div className="space-y-4">
                   {Object.entries(stats.byCategory)
                     .filter(([_, amount]) => amount > 0)
@@ -392,15 +398,11 @@ const App = () => {
                             </div>
                           </div>
                           <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
-                            <div 
-                              className={`h-full ${categoryColors[category].bg} rounded-full transition-all duration-500 shadow-sm`}
-                              style={{ width: `${percentage}%` }}
-                            ></div>
+                            <div className={`h-full ${categoryColors[category].bg} rounded-full transition-all duration-500 shadow-sm`} style={{ width: `${percentage}%` }}></div>
                           </div>
                         </div>
                       );
                     })}
-                  
                   {Object.values(stats.byCategory).every(v => v === 0) && (
                     <div className="text-center py-8">
                       <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
@@ -411,71 +413,12 @@ const App = () => {
                   )}
                 </div>
               </div>
-
-              {/* Donut Chart */}
-              {Object.values(stats.byCategory).some(v => v > 0) && (
-                <div className="bg-white rounded-3xl p-6 shadow-lg border-2 border-gray-100">
-                  <h3 className="text-xl font-black text-gray-900 mb-6 text-center">Spending Distribution</h3>
-                  <div className="flex items-center justify-center mb-6">
-                    <div className="relative w-48 h-48">
-                      <svg viewBox="0 0 100 100" className="transform -rotate-90">
-                        {Object.entries(stats.byCategory)
-                          .filter(([_, amount]) => amount > 0)
-                          .reduce((acc, [category, amount], i, arr) => {
-                            const percentage = (amount / stats.total) * 100;
-                            const prevPercentage = acc.length > 0 ? acc[acc.length - 1].cumulative : 0;
-                            acc.push({
-                              category,
-                              percentage,
-                              cumulative: prevPercentage + percentage,
-                              color: categoryColors[category].hex
-                            });
-                            return acc;
-                          }, [])
-                          .map((item, i) => {
-                            const strokeDasharray = `${item.percentage} ${100 - item.percentage}`;
-                            const strokeDashoffset = 25 - (i > 0 ? item.cumulative - item.percentage : 0);
-                            return (
-                              <circle
-                                key={item.category}
-                                cx="50"
-                                cy="50"
-                                r="15.9"
-                                fill="none"
-                                stroke={item.color}
-                                strokeWidth="12"
-                                strokeDasharray={strokeDasharray}
-                                strokeDashoffset={strokeDashoffset}
-                              />
-                            );
-                          })}
-                      </svg>
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <div className="text-center">
-                          <p className="text-2xl font-black text-gray-900">{stats.count}</p>
-                          <p className="text-xs text-gray-500 font-bold">receipts</p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    {Object.entries(stats.byCategory)
-                      .filter(([_, amount]) => amount > 0)
-                      .map(([category]) => (
-                        <div key={category} className="flex items-center gap-2">
-                          <div className={`w-3 h-3 ${categoryColors[category].bg} rounded-full`}></div>
-                          <span className="text-sm font-bold text-gray-700">{category}</span>
-                        </div>
-                      ))}
-                  </div>
-                </div>
-              )}
             </div>
           )}
         </div>
 
         {/* Bottom Nav */}
-        <div className="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-xl border-t border-gray-200 shadow-lg">
+        <div className="fixed bottom-0 left-0 right-0 blur-nav">
           <div className="max-w-md mx-auto px-6 py-3 flex justify-around">
             <button onClick={() => setView('list')} className={`flex flex-col items-center gap-1 py-2 ${view === 'list' ? 'text-purple-500' : 'text-gray-400'}`}>
               <Receipt size={26} strokeWidth={2.5} />

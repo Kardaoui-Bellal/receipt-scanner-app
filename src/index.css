@@ -2,6 +2,37 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Global typography and smoothing to match soft iOS-like mockups */
+html, body, #root {
+  height: 100%;
+}
+
+body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background: radial-gradient(1200px 600px at 50% -100px, rgb(248 250 252) 0%, rgb(250 245 255) 40%, rgb(253 242 248) 100%);
+}
+
+/* Soft card shadows and rounded corners */
+.soft-card {
+  @apply bg-white rounded-3xl shadow-lg border border-gray-100;
+}
+
+/* Subtle pill inputs as in mockups */
+.pill-input {
+  @apply bg-white rounded-2xl shadow-sm border border-gray-100 px-4 py-3 font-medium focus:outline-none focus:ring-2 focus:ring-purple-500;
+}
+
+/* Gradient headline text */
+.headline-gradient {
+  @apply bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent;
+}
+
+/* Bottom nav blur and border */
+.blur-nav {
+  @apply bg-white/80 backdrop-blur-xl border-t border-gray-200 shadow-lg;
+}
+
 body {
   margin: 0;
   padding: 0;
