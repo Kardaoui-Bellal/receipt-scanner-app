@@ -16,6 +16,7 @@ const App = () => {
   const [apiKey, setApiKey] = useState('');
   const [useAI, setUseAI] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [aiProvider, setAiProvider] = useState('groq'); // groq is free and works for all users
 
   const categories = ['Food', 'Transport', 'Shopping', 'Bills', 'Other'];
   
@@ -67,9 +68,13 @@ const App = () => {
   useEffect(() => {
     loadReceipts();
     const savedKey = localStorage.getItem('openai_api_key');
+    const savedProvider = localStorage.getItem('ai_provider');
     if (savedKey) {
       setApiKey(savedKey);
       setUseAI(true);
+    }
+    if (savedProvider) {
+      setAiProvider(savedProvider);
     }
   }, []);
 
@@ -109,14 +114,12 @@ const App = () => {
   };
 
   const parseReceiptWithAI = async (ocrText) => {
-    if (!apiKey || !useAI) return null;
+    if (!useAI) return null;
+    
+    // Ollama doesn't require API key
+    if (aiProvider !== 'ollama' && !apiKey) return null;
     
     try {
-      const openai = new OpenAI({
-        apiKey: apiKey,
-        dangerouslyAllowBrowser: true
-      });
-
       const prompt = `You are a receipt parser. Extract structured data from this receipt text.
 
 Receipt Text:
@@ -141,19 +144,63 @@ Rules:
 - items: Individual purchases with name and price
 - Return valid JSON only, no markdown or explanations`;
 
-      const response = await openai.chat.completions.create({
-        model: 'gpt-4o-mini',
-        messages: [{ role: 'user', content: prompt }],
-        temperature: 0.1,
-        max_tokens: 1000
-      });
-
-      const content = response.choices[0].message.content.trim();
-      const jsonMatch = content.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        const parsed = JSON.parse(jsonMatch[0]);
+      let response;
+      
+      if (aiProvider === 'groq') {
+        // Groq API (free tier available)
+        const groqResponse = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${apiKey}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            model: 'llama-3.3-70b-versatile',
+            messages: [{ role: 'user', content: prompt }],
+            temperature: 0.1,
+            max_tokens: 1000
+          })
+        });
+        response = await groqResponse.json();
+        const content = response.choices[0].message.content.trim();
+        const jsonMatch = content.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          return JSON.parse(jsonMatch[0]);
+        }
+      } else if (aiProvider === 'ollama') {
+        // Ollama (local models)
+        const ollamaResponse = await fetch('http://localhost:11434/api/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            model: 'llama3.2:3b',
+            prompt: prompt,
+            stream: false,
+            format: 'json'
+          })
+        });
+        response = await ollamaResponse.json();
+        const parsed = JSON.parse(response.response);
         return parsed;
+      } else {
+        // OpenAI
+        const openai = new OpenAI({
+          apiKey: apiKey,
+          dangerouslyAllowBrowser: true
+        });
+        response = await openai.chat.completions.create({
+          model: 'gpt-4o-mini',
+          messages: [{ role: 'user', content: prompt }],
+          temperature: 0.1,
+          max_tokens: 1000
+        });
+        const content = response.choices[0].message.content.trim();
+        const jsonMatch = content.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          return JSON.parse(jsonMatch[0]);
+        }
       }
+      
       return null;
     } catch (error) {
       console.error('AI parsing error:', error);
@@ -702,29 +749,76 @@ Rules:
                 </div>
                 
                 {useAI && (
-                  <div>
-                    <label className="block text-sm font-bold text-neutral-700 mb-2" htmlFor="apiKey">OpenAI API Key</label>
-                    <input
-                      id="apiKey"
-                      type="password"
-                      value={apiKey}
-                      onChange={(e) => setApiKey(e.target.value)}
-                      placeholder="sk-..."
-                      className="w-full px-4 py-3 bg-neutral-50 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono text-sm"
-                    />
-                    <p className="text-xs text-neutral-500 mt-2">
-                      Get your API key from <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer" className="text-indigo-600 hover:underline">OpenAI Platform</a>
-                    </p>
-                  </div>
+                  <>
+                    <div>
+                      <label className="block text-sm font-bold text-neutral-700 mb-2">AI Provider</label>
+                      <select
+                        value={aiProvider}
+                        onChange={(e) => setAiProvider(e.target.value)}
+                        className="w-full px-4 py-3 bg-neutral-50 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium"
+                      >
+                        <option value="groq">🚀 Groq - FREE (Recommended)</option>
+                        <option value="openai">🤖 OpenAI - Paid</option>
+                        <option value="ollama">🏠 Ollama - Local Only (Advanced)</option>
+                      </select>
+                      {aiProvider === 'groq' && (
+                        <div className="mt-2 p-3 bg-green-50 border border-green-200 rounded-lg">
+                          <p className="text-sm font-semibold text-green-800 mb-1">✅ Best for web apps!</p>
+                          <p className="text-xs text-green-700">
+                            Free API with 14,400 requests/day • Works for all users • Fast inference
+                          </p>
+                          <a href="https://console.groq.com/keys" target="_blank" rel="noopener noreferrer" className="text-xs text-green-600 hover:underline font-semibold mt-1 inline-block">
+                            → Get your free API key here
+                          </a>
+                        </div>
+                      )}
+                      {aiProvider === 'ollama' && (
+                        <div className="mt-2 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                          <p className="text-sm font-semibold text-amber-800 mb-1">⚠️ Local development only</p>
+                          <p className="text-xs text-amber-700">
+                            Only works on YOUR computer. Other users won't be able to use this unless they install Ollama themselves.
+                          </p>
+                          <a href="https://ollama.com/download" target="_blank" rel="noopener noreferrer" className="text-xs text-amber-600 hover:underline font-semibold mt-1 inline-block">
+                            → Download Ollama
+                          </a>
+                        </div>
+                      )}
+                      {aiProvider === 'openai' && (
+                        <p className="text-xs text-neutral-500 mt-2">
+                          Most accurate but requires payment • <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer" className="text-indigo-600 hover:underline">Get API key</a>
+                        </p>
+                      )}
+                    </div>
+                    
+                    {aiProvider !== 'ollama' && (
+                      <div>
+                        <label className="block text-sm font-bold text-neutral-700 mb-2" htmlFor="apiKey">
+                          API Key {aiProvider === 'groq' && '(Free)'}
+                        </label>
+                        <input
+                          id="apiKey"
+                          type="password"
+                          value={apiKey}
+                          onChange={(e) => setApiKey(e.target.value)}
+                          placeholder={aiProvider === 'groq' ? 'gsk_...' : 'sk-...'}
+                          className="w-full px-4 py-3 bg-neutral-50 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono text-sm"
+                        />
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
               <div className="flex gap-3 mt-6">
                 <button 
                   onClick={() => {
-                    if (useAI && apiKey) {
-                      localStorage.setItem('openai_api_key', apiKey);
+                    if (useAI) {
+                      if (aiProvider !== 'ollama' && apiKey) {
+                        localStorage.setItem('openai_api_key', apiKey);
+                      }
+                      localStorage.setItem('ai_provider', aiProvider);
                     } else {
                       localStorage.removeItem('openai_api_key');
+                      localStorage.removeItem('ai_provider');
                     }
                     setShowSettings(false);
                   }} 
