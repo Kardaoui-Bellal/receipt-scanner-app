@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Camera, Plus, Search, TrendingUp, Calendar, Receipt, X, Edit3, Trash2, DollarSign, Filter, ArrowUp, ArrowDown, BarChart3, PieChart } from 'lucide-react';
+import { Camera, Plus, Search, TrendingUp, Calendar, Receipt, X, Edit3, Trash2, DollarSign, Filter, ArrowUp, ArrowDown, BarChart3, PieChart, Settings } from 'lucide-react';
 import Tesseract from 'tesseract.js';
+import OpenAI from 'openai';
 
 const App = () => {
   const [receipts, setReceipts] = useState([]);
@@ -12,6 +13,9 @@ const App = () => {
   const [expandedReceipt, setExpandedReceipt] = useState(null);
   const [previewImage, setPreviewImage] = useState(null);
   const [editingReceipt, setEditingReceipt] = useState(null);
+  const [apiKey, setApiKey] = useState('');
+  const [useAI, setUseAI] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
 
   const categories = ['Food', 'Transport', 'Shopping', 'Bills', 'Other'];
   
@@ -62,6 +66,11 @@ const App = () => {
 
   useEffect(() => {
     loadReceipts();
+    const savedKey = localStorage.getItem('openai_api_key');
+    if (savedKey) {
+      setApiKey(savedKey);
+      setUseAI(true);
+    }
   }, []);
 
   const loadReceipts = () => {
@@ -99,6 +108,59 @@ const App = () => {
     return 'Other';
   };
 
+  const parseReceiptWithAI = async (ocrText) => {
+    if (!apiKey || !useAI) return null;
+    
+    try {
+      const openai = new OpenAI({
+        apiKey: apiKey,
+        dangerouslyAllowBrowser: true
+      });
+
+      const prompt = `You are a receipt parser. Extract structured data from this receipt text.
+
+Receipt Text:
+${ocrText}
+
+Return ONLY a valid JSON object with this exact structure:
+{
+  "merchant": "store name",
+  "date": "YYYY-MM-DD",
+  "total": 0.00,
+  "category": "Food" or "Transport" or "Shopping" or "Bills" or "Other",
+  "items": [
+    {"name": "item name", "price": 0.00}
+  ]
+}
+
+Rules:
+- merchant: First clear business name found
+- date: Format as YYYY-MM-DD, use today if not found
+- total: Final total amount
+- category: Choose best fit: Food (groceries/restaurants), Transport (gas/uber), Shopping (retail), Bills (utilities), Other
+- items: Individual purchases with name and price
+- Return valid JSON only, no markdown or explanations`;
+
+      const response = await openai.chat.completions.create({
+        model: 'gpt-4o-mini',
+        messages: [{ role: 'user', content: prompt }],
+        temperature: 0.1,
+        max_tokens: 1000
+      });
+
+      const content = response.choices[0].message.content.trim();
+      const jsonMatch = content.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        const parsed = JSON.parse(jsonMatch[0]);
+        return parsed;
+      }
+      return null;
+    } catch (error) {
+      console.error('AI parsing error:', error);
+      return null;
+    }
+  };
+
   const processReceipt = async (file) => {
     setScanning(true);
     setScanProgress(0);
@@ -120,64 +182,83 @@ const App = () => {
       });
 
       const text = result.data.text;
-      const lines = text.split('\n').map(l => l.trim()).filter(line => line.length > 2);
       
-      let merchant = 'Unknown Store';
-      for (let i = 0; i < Math.min(5, lines.length); i++) {
-        const line = lines[i].trim();
-        if (line.length > 3 && line.length < 50) {
-          merchant = line;
-          break;
-        }
+      // Try AI parsing first if enabled
+      let aiData = null;
+      if (useAI && apiKey) {
+        aiData = await parseReceiptWithAI(text);
       }
 
-      let date = new Date().toISOString().split('T')[0];
-      let total = 0;
-      const amountRegex = /\$?\s*(\d+[,.]?\d*\.?\d{2})/g;
-      const singleAmountRegex = /\$?\s*(\d+(?:[,.]\d{2})?)/;
+      let merchant, date, total, category, items;
 
-      // Extract probable line items: name + price on line
-      const items = [];
-      lines.forEach(line => {
-        // skip lines that look like totals or headers
-        const lower = line.toLowerCase();
-        const isTotaly = lower.includes('total') || lower.includes('subtotal') || lower.includes('tax');
-        if (isTotaly) return;
-        const m = line.match(singleAmountRegex);
-        if (m) {
-          const price = parseFloat(m[1].replace(/[,$]/g, ''));
-          if (!isNaN(price) && price > 0) {
-            // name is line without price token
-            const name = line.replace(m[0], '').replace(/\s{2,}/g, ' ').trim();
-            if (name && name.length > 1 && name.length < 50) {
-              items.push({ name, price });
-            }
-          }
-        }
-      });
+      if (aiData) {
+        // Use AI-parsed data
+        merchant = aiData.merchant || 'Unknown Store';
+        date = aiData.date || new Date().toISOString().split('T')[0];
+        total = aiData.total || 0;
+        category = aiData.category || 'Other';
+        items = aiData.items || [];
+      } else {
+        // Fallback to regex parsing
+        const lines = text.split('\n').map(l => l.trim()).filter(line => line.length > 2);
       
-      for (const line of lines) {
-        if (line.toLowerCase().includes('total')) {
-          const amounts = [...line.matchAll(amountRegex)];
-          if (amounts.length > 0) {
-            total = parseFloat(amounts[amounts.length - 1][1].replace(/[,$]/g, ''));
+        merchant = 'Unknown Store';
+        for (let i = 0; i < Math.min(5, lines.length); i++) {
+          const line = lines[i].trim();
+          if (line.length > 3 && line.length < 50) {
+            merchant = line;
             break;
           }
         }
-      }
 
-      if (total === 0) {
-        const allAmounts = [];
+        date = new Date().toISOString().split('T')[0];
+        total = 0;
+        const amountRegex = /\$?\s*(\d+[,.]?\d*\.?\d{2})/g;
+        const singleAmountRegex = /\$?\s*(\d+(?:[,.]\d{2})?)/;
+
+        // Extract probable line items: name + price on line
+        items = [];
         lines.forEach(line => {
-          [...line.matchAll(amountRegex)].forEach(match => {
-            const amount = parseFloat(match[1].replace(/[,$]/g, ''));
-            if (!isNaN(amount) && amount > 0) allAmounts.push(amount);
-          });
+          // skip lines that look like totals or headers
+          const lower = line.toLowerCase();
+          const isTotaly = lower.includes('total') || lower.includes('subtotal') || lower.includes('tax');
+          if (isTotaly) return;
+          const m = line.match(singleAmountRegex);
+          if (m) {
+            const price = parseFloat(m[1].replace(/[,$]/g, ''));
+            if (!isNaN(price) && price > 0) {
+              // name is line without price token
+              const name = line.replace(m[0], '').replace(/\s{2,}/g, ' ').trim();
+              if (name && name.length > 1 && name.length < 50) {
+                items.push({ name, price });
+              }
+            }
+          }
         });
-        if (allAmounts.length > 0) total = Math.max(...allAmounts);
-      }
+        
+        for (const line of lines) {
+          if (line.toLowerCase().includes('total')) {
+            const amounts = [...line.matchAll(amountRegex)];
+            if (amounts.length > 0) {
+              total = parseFloat(amounts[amounts.length - 1][1].replace(/[,$]/g, ''));
+              break;
+            }
+          }
+        }
 
-      const category = categorizeByMerchant(merchant);
+        if (total === 0) {
+          const allAmounts = [];
+          lines.forEach(line => {
+            [...line.matchAll(amountRegex)].forEach(match => {
+              const amount = parseFloat(match[1].replace(/[,$]/g, ''));
+              if (!isNaN(amount) && amount > 0) allAmounts.push(amount);
+            });
+          });
+          if (allAmounts.length > 0) total = Math.max(...allAmounts);
+        }
+
+        category = categorizeByMerchant(merchant);
+      }
       const itemCount = Math.floor(Math.random() * 90000) + 10000;
 
       const newReceipt = {
@@ -286,12 +367,20 @@ const App = () => {
             <h1 className="text-3xl font-black text-neutral-900">
               {view === 'list' ? 'Receipts' : 'Analytics'}
             </h1>
-            {view === 'list' && (
-              <label aria-label="Add receipt" className="cursor-pointer bg-gradient-to-r from-indigo-600 to-blue-600 text-white w-12 h-12 rounded-xl flex items-center justify-center hover:shadow-lg hover:from-indigo-700 hover:to-blue-700 transition-all active:scale-95">
-                <Plus size={24} strokeWidth={3} />
-                <input type="file" accept="image/*" capture="environment" onChange={handleFileUpload} className="hidden" disabled={scanning} />
-              </label>
-            )}
+            <div className="flex gap-2">
+              <button 
+                onClick={() => setShowSettings(true)}
+                className="bg-neutral-100 text-neutral-700 w-12 h-12 rounded-xl flex items-center justify-center hover:bg-neutral-200 transition-all active:scale-95"
+              >
+                <Settings size={20} strokeWidth={2} />
+              </button>
+              {view === 'list' && (
+                <label aria-label="Add receipt" className="cursor-pointer bg-gradient-to-r from-indigo-600 to-blue-600 text-white w-12 h-12 rounded-xl flex items-center justify-center hover:shadow-lg hover:from-indigo-700 hover:to-blue-700 transition-all active:scale-95">
+                  <Plus size={24} strokeWidth={3} />
+                  <input type="file" accept="image/*" capture="environment" onChange={handleFileUpload} className="hidden" disabled={scanning} />
+                </label>
+              )}
+            </div>
           </div>
           
           {view === 'list' && (
@@ -586,6 +675,67 @@ const App = () => {
                   Save
                 </button>
                 <button onClick={() => setEditingReceipt(null)} className="flex-1 bg-gray-100 py-4 rounded-2xl font-bold hover:bg-gray-200 transition-all focus:ring-2 focus:ring-gray-300">
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Settings Modal */}
+        {showSettings && (
+          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShowSettings(false)}>
+            <div className="bg-white rounded-xl w-full max-w-md p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+              <h3 className="text-2xl font-black text-neutral-900 mb-6">AI Settings</h3>
+              <div className="space-y-4">
+                <div>
+                  <label className="flex items-center gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={useAI}
+                      onChange={(e) => setUseAI(e.target.checked)}
+                      className="w-5 h-5 rounded border-neutral-300 text-indigo-600 focus:ring-indigo-500"
+                    />
+                    <span className="font-semibold text-neutral-900">Use AI for better parsing</span>
+                  </label>
+                  <p className="text-sm text-neutral-500 mt-2 ml-8">AI provides more accurate item extraction and categorization</p>
+                </div>
+                
+                {useAI && (
+                  <div>
+                    <label className="block text-sm font-bold text-neutral-700 mb-2" htmlFor="apiKey">OpenAI API Key</label>
+                    <input
+                      id="apiKey"
+                      type="password"
+                      value={apiKey}
+                      onChange={(e) => setApiKey(e.target.value)}
+                      placeholder="sk-..."
+                      className="w-full px-4 py-3 bg-neutral-50 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono text-sm"
+                    />
+                    <p className="text-xs text-neutral-500 mt-2">
+                      Get your API key from <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer" className="text-indigo-600 hover:underline">OpenAI Platform</a>
+                    </p>
+                  </div>
+                )}
+              </div>
+              <div className="flex gap-3 mt-6">
+                <button 
+                  onClick={() => {
+                    if (useAI && apiKey) {
+                      localStorage.setItem('openai_api_key', apiKey);
+                    } else {
+                      localStorage.removeItem('openai_api_key');
+                    }
+                    setShowSettings(false);
+                  }} 
+                  className="flex-1 bg-gradient-to-r from-indigo-600 to-blue-600 text-white py-3 rounded-lg font-bold hover:shadow-lg transition-all"
+                >
+                  Save
+                </button>
+                <button 
+                  onClick={() => setShowSettings(false)} 
+                  className="flex-1 bg-neutral-100 py-3 rounded-lg font-bold hover:bg-neutral-200 transition-all"
+                >
                   Cancel
                 </button>
               </div>
