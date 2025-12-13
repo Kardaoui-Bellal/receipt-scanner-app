@@ -116,10 +116,26 @@ const App = () => {
   const parseReceiptWithAI = async (ocrText) => {
     if (!useAI) return null;
     
-    // Ollama doesn't require API key
-    if (aiProvider !== 'ollama' && !apiKey) return null;
-    
     try {
+      // Check if backend server is available first
+      const backendUrl = 'http://localhost:3001/api/parse-receipt';
+      
+      try {
+        const backendResponse = await fetch(backendUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ocrText })
+        });
+
+        if (backendResponse.ok) {
+          const data = await backendResponse.json();
+          return data;
+        }
+      } catch (backendError) {
+        console.log('Backend not available, falling back to client-side parsing');
+      }
+
+      // Fallback to client-side parsing if backend not available
       const prompt = `You are a receipt parser. Extract structured data from this receipt text.
 
 Receipt Text:
@@ -141,13 +157,14 @@ Rules:
 - date: Format as YYYY-MM-DD, use today if not found
 - total: Final total amount
 - category: Choose best fit: Food (groceries/restaurants), Transport (gas/uber), Shopping (retail), Bills (utilities), Other
-- items: Individual purchases with name and price
+- items: Individual purchases with name and price (must extract ALL items)
 - Return valid JSON only, no markdown or explanations`;
 
       let response;
       
       if (aiProvider === 'groq') {
-        // Groq API (free tier available)
+        if (!apiKey) return null; // Need API key for client-side Groq
+        
         const groqResponse = await fetch('https://api.groq.com/openai/v1/chat/completions', {
           method: 'POST',
           headers: {
@@ -158,7 +175,7 @@ Rules:
             model: 'llama-3.3-70b-versatile',
             messages: [{ role: 'user', content: prompt }],
             temperature: 0.1,
-            max_tokens: 1000
+            max_tokens: 2000
           })
         });
         response = await groqResponse.json();
@@ -192,7 +209,7 @@ Rules:
           model: 'gpt-4o-mini',
           messages: [{ role: 'user', content: prompt }],
           temperature: 0.1,
-          max_tokens: 1000
+          max_tokens: 2000
         });
         const content = response.choices[0].message.content.trim();
         const jsonMatch = content.match(/\{[\s\S]*\}/);
@@ -757,19 +774,23 @@ Rules:
                         onChange={(e) => setAiProvider(e.target.value)}
                         className="w-full px-4 py-3 bg-neutral-50 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium"
                       >
-                        <option value="groq">🚀 Groq - FREE (Recommended)</option>
+                        <option value="groq">🚀 Groq - FREE (Backend Powered)</option>
                         <option value="openai">🤖 OpenAI - Paid</option>
                         <option value="ollama">🏠 Ollama - Local Only (Advanced)</option>
                       </select>
                       {aiProvider === 'groq' && (
                         <div className="mt-2 p-3 bg-green-50 border border-green-200 rounded-lg">
-                          <p className="text-sm font-semibold text-green-800 mb-1">✅ Best for web apps!</p>
-                          <p className="text-xs text-green-700">
-                            Free API with 14,400 requests/day • Works for all users • Fast inference
+                          <p className="text-sm font-semibold text-green-800 mb-1">✅ No API Key Needed!</p>
+                          <p className="text-xs text-green-700 mb-2">
+                            The backend server handles the API key securely. Just enable AI and it works automatically.
                           </p>
-                          <a href="https://console.groq.com/keys" target="_blank" rel="noopener noreferrer" className="text-xs text-green-600 hover:underline font-semibold mt-1 inline-block">
-                            → Get your free API key here
-                          </a>
+                          <p className="text-xs text-neutral-600 bg-white px-2 py-1 rounded border border-neutral-200">
+                            <strong>Setup (One time):</strong><br/>
+                            1. Create account at <a href="https://console.groq.com" target="_blank" rel="noopener noreferrer" className="text-indigo-600 hover:underline">console.groq.com</a><br/>
+                            2. Copy your API key<br/>
+                            3. Add to <code className="bg-neutral-200 px-1">.env</code> file: <code className="bg-neutral-200 px-1">GROQ_API_KEY=...</code><br/>
+                            4. Run: <code className="bg-neutral-200 px-1">npm run server</code>
+                          </p>
                         </div>
                       )}
                       {aiProvider === 'ollama' && (
@@ -790,19 +811,26 @@ Rules:
                       )}
                     </div>
                     
-                    {aiProvider !== 'ollama' && (
+                    {aiProvider === 'openai' && (
                       <div>
                         <label className="block text-sm font-bold text-neutral-700 mb-2" htmlFor="apiKey">
-                          API Key {aiProvider === 'groq' && '(Free)'}
+                          OpenAI API Key
                         </label>
                         <input
                           id="apiKey"
                           type="password"
                           value={apiKey}
                           onChange={(e) => setApiKey(e.target.value)}
-                          placeholder={aiProvider === 'groq' ? 'gsk_...' : 'sk-...'}
+                          placeholder="sk-..."
                           className="w-full px-4 py-3 bg-neutral-50 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono text-sm"
                         />
+                      </div>
+                    )}
+                    {aiProvider === 'ollama' && (
+                      <div className="p-3 bg-neutral-100 rounded-lg">
+                        <p className="text-xs text-neutral-700">
+                          Keep Ollama running on <code className="bg-white px-2 py-1 rounded">http://localhost:11434</code> in the background
+                        </p>
                       </div>
                     )}
                   </>
