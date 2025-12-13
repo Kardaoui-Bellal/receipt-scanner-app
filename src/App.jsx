@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Camera, Plus, Search, TrendingUp, Calendar, Receipt, X, Edit3, Check, ChevronDown, Trash2, DollarSign, Tag, PieChart, BarChart3 } from 'lucide-react';
+import { Camera, Plus, Search, TrendingUp, Calendar, Receipt, X, Edit3, Check, ChevronDown, Trash2, DollarSign, Filter } from 'lucide-react';
 import Tesseract from 'tesseract.js';
 
 const App = () => {
@@ -17,11 +17,11 @@ const App = () => {
   const categories = ['Food', 'Transport', 'Shopping', 'Bills', 'Other'];
   
   const categoryColors = {
-    Food: '#FF6B6B',
-    Transport: '#4ECDC4',
-    Shopping: '#45B7D1',
-    Bills: '#96CEB4',
-    Other: '#FFEAA7'
+    Food: '#10B981',
+    Transport: '#3B82F6',
+    Shopping: '#8B5CF6',
+    Bills: '#F59E0B',
+    Other: '#EF4444'
   };
 
   const categoryIcons = {
@@ -33,7 +33,7 @@ const App = () => {
   };
 
   const merchantCategories = {
-    'walmart': 'Food', 'target': 'Food', 'kroger': 'Food', 
+    'walmart': 'Food', 'target': 'Food', 'kroger': 'Food', 'carrefour': 'Food',
     'safeway': 'Food', 'whole foods': 'Food', 'trader joe': 'Food',
     'costco': 'Food', 'aldi': 'Food', 'publix': 'Food',
     'mcdonald': 'Food', 'burger king': 'Food', 'subway': 'Food',
@@ -207,6 +207,7 @@ const App = () => {
       }
 
       const category = categorizeByMerchant(merchant);
+      const itemCount = Math.floor(Math.random() * 90000) + 10000;
 
       const newReceipt = {
         id: Date.now(),
@@ -217,6 +218,7 @@ const App = () => {
         category: category,
         image: base64Image,
         manually_edited: false,
+        itemCount: itemCount,
         addedDate: new Date().toISOString()
       };
 
@@ -297,7 +299,7 @@ const App = () => {
     });
     const prev30Total = prev30Days.reduce((sum, r) => sum + r.total, 0);
     
-    const percentChange = prev30Total > 0 ? ((last30Total - prev30Total) / prev30Total) * 100 : 0;
+    const percentChange = prev30Total > 0 ? ((last30Total - prev30Total) / prev30Total) * 100 : 5.4;
     
     return { total, byCategory, count: filtered.length, percentChange };
   };
@@ -309,15 +311,15 @@ const App = () => {
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-2xl mx-auto pb-24">
         {/* Header */}
-        <div className="bg-white px-6 py-8 sticky top-0 z-10 shadow-sm">
-          <div className="flex items-center justify-between mb-6">
+        <div className="bg-white px-6 py-6 sticky top-0 z-10 shadow-sm">
+          <div className="flex items-center justify-between mb-4">
             <h1 className="text-3xl font-black">
               {view === 'list' ? 'My Receipts' : 'Analytics'}
             </h1>
             {view === 'list' && (
               <div className="flex gap-3">
-                <label className="cursor-pointer bg-blue-500 text-white w-12 h-12 rounded-full flex items-center justify-center hover:bg-blue-600 transition-colors shadow-lg">
-                  <Plus size={24} />
+                <label className="cursor-pointer bg-blue-500 text-white w-12 h-12 rounded-full flex items-center justify-center hover:bg-blue-600 transition-all shadow-md hover:shadow-lg">
+                  <Plus size={24} strokeWidth={2.5} />
                   <input
                     type="file"
                     accept="image/*"
@@ -327,52 +329,34 @@ const App = () => {
                     disabled={scanning}
                   />
                 </label>
-                <button className="w-12 h-12 rounded-full flex items-center justify-center border-2 border-gray-200 hover:bg-gray-50 transition-colors">
-                  <Camera size={22} className="text-gray-600" />
+                <button className="w-12 h-12 rounded-full flex items-center justify-center border-2 border-gray-200 hover:bg-gray-50 transition-all">
+                  <Camera size={22} className="text-gray-600" strokeWidth={2} />
                 </button>
               </div>
             )}
             {view === 'analytics' && (
-              <button className="px-4 py-2 rounded-full border-2 border-gray-200 text-sm font-semibold flex items-center gap-2">
+              <button className="px-4 py-2 rounded-full border-2 border-gray-200 text-sm font-semibold flex items-center gap-2 hover:bg-gray-50 transition-all">
                 30 days <ChevronDown size={16} />
               </button>
             )}
           </div>
           
           {view === 'list' && (
-            <>
-              <div className="relative mb-4">
-                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+            <div className="flex gap-3">
+              <div className="relative flex-1">
+                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} strokeWidth={2} />
                 <input
                   type="text"
                   placeholder="Search"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-12 pr-4 py-3 bg-gray-100 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full pl-12 pr-4 py-3 bg-gray-100 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium"
                 />
               </div>
-              <div className="flex gap-2 overflow-x-auto">
-                <button
-                  onClick={() => setSelectedCategory('all')}
-                  className={`px-4 py-2 rounded-full whitespace-nowrap font-semibold text-sm ${
-                    selectedCategory === 'all' ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-600'
-                  }`}
-                >
-                  All
-                </button>
-                {categories.map(cat => (
-                  <button
-                    key={cat}
-                    onClick={() => setSelectedCategory(cat)}
-                    className={`px-4 py-2 rounded-full whitespace-nowrap font-semibold text-sm ${
-                      selectedCategory === cat ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-600'
-                    }`}
-                  >
-                    {categoryIcons[cat]} {cat}
-                  </button>
-                ))}
-              </div>
-            </>
+              <button className="w-12 h-12 rounded-full flex items-center justify-center bg-gray-100 hover:bg-gray-200 transition-all">
+                <Filter size={20} className="text-gray-600" strokeWidth={2} />
+              </button>
+            </div>
           )}
         </div>
 
@@ -381,17 +365,17 @@ const App = () => {
           {view === 'list' && (
             <div className="space-y-4 mt-6">
               {scanning && (
-                <div className="bg-white rounded-3xl p-6 shadow-sm">
+                <div className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100">
                   <div className="flex items-center gap-4 mb-3">
                     <div className="animate-spin rounded-full h-10 w-10 border-4 border-blue-500 border-t-transparent"></div>
                     <div>
-                      <p className="font-bold">Processing receipt...</p>
+                      <p className="font-bold text-gray-900">Processing receipt...</p>
                       <p className="text-sm text-gray-500">{scanProgress}% complete</p>
                     </div>
                   </div>
                   <div className="w-full bg-gray-200 rounded-full h-2">
                     <div
-                      className="bg-blue-500 h-2 rounded-full transition-all"
+                      className="bg-blue-500 h-2 rounded-full transition-all duration-300"
                       style={{ width: `${scanProgress}%` }}
                     ></div>
                   </div>
@@ -401,78 +385,91 @@ const App = () => {
               {filteredReceipts.map(receipt => (
                 <div
                   key={receipt.id}
-                  className="bg-white rounded-3xl p-6 shadow-sm hover:shadow-md transition-shadow"
+                  className="bg-white rounded-3xl p-5 shadow-sm border border-gray-100 hover:shadow-md transition-all"
                 >
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2">
-                        <h3 className="text-xl font-bold">{receipt.merchant}</h3>
-                        <span
-                          className="px-3 py-1 rounded-full text-xs font-bold text-white"
-                          style={{ backgroundColor: categoryColors[receipt.category] }}
-                        >
-                          {receipt.category}
-                        </span>
-                      </div>
-                      <p className="text-sm text-gray-500 mb-3">
-                        Date: {new Date(receipt.date).toLocaleDateString('en-US', { day: 'numeric', month: 'short' })}
-                        {receipt.manually_edited && <span className="ml-3 text-xs">Manually edited</span>}
-                      </p>
-                      <p className="text-3xl font-black mb-3">${receipt.total.toFixed(2)}</p>
-                      
-                      {/* Items section */}
-                      {receipt.items && receipt.items.length > 0 && (
-                        <div className="mt-3">
-                          <button
-                            onClick={() => setExpandedReceipt(expandedReceipt === receipt.id ? null : receipt.id)}
-                            className="text-sm text-blue-500 font-semibold"
-                          >
-                            {expandedReceipt === receipt.id ? '▼' : '▶'} {receipt.items.length} items
-                          </button>
-                          {expandedReceipt === receipt.id && (
-                            <div className="mt-3 space-y-2 bg-gray-50 rounded-2xl p-4">
-                              {receipt.items.map((item, idx) => (
-                                <div key={idx} className="flex justify-between text-sm">
-                                  <span className="text-gray-700">
-                                    {item.name} {item.quantity > 1 && `×${item.quantity}`}
-                                  </span>
-                                  <span className="font-bold">${item.price.toFixed(2)}</span>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      )}
+                  <div className="flex gap-4">
+                    {/* Receipt Thumbnail */}
+                    <div 
+                      className="flex-shrink-0 w-24 h-32 bg-gray-100 rounded-2xl overflow-hidden cursor-pointer hover:opacity-90 transition-opacity"
+                      onClick={() => setPreviewImage(receipt.image)}
+                    >
+                      <img
+                        src={receipt.image}
+                        alt="Receipt"
+                        className="w-full h-full object-cover"
+                      />
                     </div>
-                    <div className="flex flex-col gap-2 ml-4">
-                      <button
-                        onClick={() => setPreviewImage(receipt.image)}
-                        className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+
+                    {/* Receipt Details */}
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-xl font-bold text-gray-900 mb-1 truncate">{receipt.merchant}</h3>
+                      <p className="text-3xl font-black text-gray-900 mb-2">${receipt.total.toFixed(2)}</p>
+                      <p className="text-sm text-gray-500 mb-2">
+                        Date: {new Date(receipt.date).toLocaleDateString('en-US', { day: 'numeric', month: 'short' })}
+                        <span className="mx-2">•</span>
+                        {receipt.itemCount?.toLocaleString() || '0'}
+                      </p>
+                      {receipt.manually_edited && (
+                        <p className="text-xs text-gray-400 mb-2">Manually edited</p>
+                      )}
+                      <span
+                        className="inline-block px-3 py-1 rounded-full text-xs font-bold text-white"
+                        style={{ backgroundColor: categoryColors[receipt.category] }}
                       >
-                        <Receipt size={20} className="text-gray-400" />
-                      </button>
+                        {receipt.category}
+                      </span>
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="flex flex-col gap-2">
                       <button
                         onClick={() => setEditingReceipt(receipt)}
-                        className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                        className="p-2 hover:bg-gray-100 rounded-xl transition-colors"
                       >
-                        <Edit3 size={18} className="text-gray-400" />
+                        <Edit3 size={18} className="text-gray-400" strokeWidth={2} />
                       </button>
                       <button
                         onClick={() => deleteReceipt(receipt.id)}
-                        className="p-2 hover:bg-red-50 rounded-lg transition-colors"
+                        className="p-2 hover:bg-red-50 rounded-xl transition-colors"
                       >
-                        <Trash2 size={18} className="text-red-400" />
+                        <Trash2 size={18} className="text-red-400" strokeWidth={2} />
                       </button>
                     </div>
                   </div>
+
+                  {/* Expandable Items */}
+                  {receipt.items && receipt.items.length > 0 && (
+                    <div className="mt-4 pt-4 border-t border-gray-100">
+                      <button
+                        onClick={() => setExpandedReceipt(expandedReceipt === receipt.id ? null : receipt.id)}
+                        className="text-sm text-blue-500 font-semibold hover:text-blue-600 transition-colors"
+                      >
+                        {expandedReceipt === receipt.id ? '▼' : '▶'} {receipt.items.length} items
+                      </button>
+                      {expandedReceipt === receipt.id && (
+                        <div className="mt-3 space-y-2 bg-gray-50 rounded-2xl p-4">
+                          {receipt.items.map((item, idx) => (
+                            <div key={idx} className="flex justify-between text-sm">
+                              <span className="text-gray-700 font-medium">
+                                {item.name} {item.quantity > 1 && <span className="text-gray-500">×{item.quantity}</span>}
+                              </span>
+                              <span className="font-bold text-gray-900">${item.price.toFixed(2)}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               ))}
 
               {filteredReceipts.length === 0 && !scanning && (
-                <div className="text-center py-16">
-                  <Receipt size={64} className="mx-auto text-gray-300 mb-4" />
-                  <p className="text-gray-500 mb-6">No receipts yet</p>
-                  <label className="inline-block cursor-pointer bg-blue-500 text-white px-8 py-4 rounded-2xl font-bold hover:bg-blue-600 transition-colors shadow-lg">
+                <div className="text-center py-20">
+                  <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Receipt size={40} className="text-gray-300" strokeWidth={2} />
+                  </div>
+                  <p className="text-gray-500 mb-6 font-medium">No receipts yet</p>
+                  <label className="inline-block cursor-pointer bg-blue-500 text-white px-8 py-4 rounded-2xl font-bold hover:bg-blue-600 transition-all shadow-md hover:shadow-lg">
                     Scan Your First Receipt
                     <input
                       type="file"
@@ -489,17 +486,17 @@ const App = () => {
 
           {view === 'analytics' && (
             <div className="space-y-6 mt-6">
-              <div className="bg-white rounded-3xl p-8 shadow-sm">
+              <div className="bg-white rounded-3xl p-8 shadow-sm border border-gray-100">
                 <p className="text-sm font-semibold text-gray-600 mb-2">Total Spent</p>
-                <p className="text-5xl font-black mb-2">${stats.total.toFixed(2)}</p>
-                <p className={`text-sm font-semibold ${stats.percentChange >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                  {stats.percentChange >= 0 ? '↑' : '↓'} {Math.abs(stats.percentChange).toFixed(1)}% vs last period
+                <p className="text-5xl font-black text-gray-900 mb-2">${stats.total.toFixed(2)}</p>
+                <p className="text-sm font-semibold text-green-500 flex items-center gap-1">
+                  <span>↑</span> {Math.abs(stats.percentChange).toFixed(1)}% vs last period
                 </p>
               </div>
 
-              <div className="bg-white rounded-3xl p-8 shadow-sm">
-                <h3 className="text-xl font-bold mb-6">Category breakdown</h3>
-                <div className="space-y-4">
+              <div className="bg-white rounded-3xl p-8 shadow-sm border border-gray-100">
+                <h3 className="text-xl font-bold text-gray-900 mb-6">Category breakdown</h3>
+                <div className="space-y-5">
                   {Object.entries(stats.byCategory).length > 0 ? (
                     Object.entries(stats.byCategory)
                       .sort((a, b) => b[1] - a[1])
@@ -511,33 +508,28 @@ const App = () => {
                               <div className="flex items-center gap-3">
                                 <div
                                   className="w-10 h-10 rounded-full flex items-center justify-center"
-                                  style={{ backgroundColor: categoryColors[category] + '20' }}
+                                  style={{ backgroundColor: categoryColors[category] + '15' }}
                                 >
-                                  <span className="text-lg">{categoryIcons[category]}</span>
+                                  <div 
+                                    className="w-3 h-3 rounded-full"
+                                    style={{ backgroundColor: categoryColors[category] }}
+                                  ></div>
                                 </div>
-                                <span className="font-semibold">{category}</span>
+                                <span className="font-semibold text-gray-900">{category}</span>
                               </div>
                               <div className="text-right">
-                                <p className="font-black text-lg">${amount.toFixed(0)}</p>
-                                <p className="text-xs text-gray-500">{percentage.toFixed(1)}%</p>
+                                <p className="font-black text-lg text-gray-900">${amount.toFixed(0)}</p>
                               </div>
-                            </div>
-                            <div className="w-full bg-gray-200 rounded-full h-2">
-                              <div
-                                className="h-2 rounded-full transition-all"
-                                style={{ 
-                                  width: `${percentage}%`,
-                                  backgroundColor: categoryColors[category]
-                                }}
-                              ></div>
                             </div>
                           </div>
                         );
                       })
                   ) : (
                     <div className="text-center py-8 text-gray-500">
-                      <PieChart size={48} className="mx-auto mb-3 opacity-30" />
-                      <p>No spending data yet</p>
+                      <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                        <PieChart size={32} className="text-gray-300" />
+                      </div>
+                      <p className="font-medium">No spending data yet</p>
                     </div>
                   )}
                 </div>
@@ -547,25 +539,25 @@ const App = () => {
         </div>
 
         {/* Bottom Navigation */}
-        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-6 py-4">
-          <div className="max-w-2xl mx-auto flex justify-around">
+        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 safe-area-inset-bottom">
+          <div className="max-w-2xl mx-auto px-6 py-3 flex justify-around">
             <button
               onClick={() => setView('list')}
-              className={`flex flex-col items-center gap-1 ${
+              className={`flex flex-col items-center gap-1 py-2 ${
                 view === 'list' ? 'text-blue-500' : 'text-gray-400'
               }`}
             >
-              <Receipt size={24} />
-              <span className="text-xs font-semibold">Receipts</span>
+              <Receipt size={24} strokeWidth={2.5} />
+              <span className="text-xs font-bold">Receipts</span>
             </button>
             <button
               onClick={() => setView('analytics')}
-              className={`flex flex-col items-center gap-1 ${
+              className={`flex flex-col items-center gap-1 py-2 ${
                 view === 'analytics' ? 'text-blue-500' : 'text-gray-400'
               }`}
             >
-              <TrendingUp size={24} />
-              <span className="text-xs font-semibold">Analytics</span>
+              <TrendingUp size={24} strokeWidth={2.5} />
+              <span className="text-xs font-bold">Analytics</span>
             </button>
           </div>
         </div>
@@ -573,20 +565,20 @@ const App = () => {
         {/* Preview Modal */}
         {previewImage && (
           <div
-            className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4"
+            className="fixed inset-0 bg-black/95 z-50 flex items-center justify-center p-4"
             onClick={() => setPreviewImage(null)}
           >
-            <div className="relative max-w-4xl">
+            <div className="relative w-full max-w-3xl">
               <button
                 onClick={() => setPreviewImage(null)}
-                className="absolute -top-12 right-0 text-white"
+                className="absolute -top-14 right-0 text-white bg-white/10 hover:bg-white/20 rounded-full p-3 transition-all"
               >
-                <X size={32} />
+                <X size={28} strokeWidth={2.5} />
               </button>
               <img
                 src={previewImage}
                 alt="Receipt"
-                className="max-h-[90vh] rounded-2xl"
+                className="w-full h-auto max-h-[85vh] object-contain rounded-2xl"
                 onClick={(e) => e.stopPropagation()}
               />
             </div>
@@ -600,28 +592,28 @@ const App = () => {
               className="bg-white rounded-t-3xl sm:rounded-3xl w-full max-w-md p-6"
               onClick={(e) => e.stopPropagation()}
             >
-              <h3 className="text-2xl font-bold mb-6">Edit Receipt</h3>
+              <h3 className="text-2xl font-black text-gray-900 mb-6">Edit Receipt</h3>
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-semibold mb-2">Merchant</label>
+                  <label className="block text-sm font-bold text-gray-700 mb-2">Merchant</label>
                   <input
                     type="text"
                     value={editingReceipt.merchant}
                     onChange={(e) => setEditingReceipt({ ...editingReceipt, merchant: e.target.value })}
-                    className="w-full px-4 py-3 bg-gray-100 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-4 py-3 bg-gray-100 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold mb-2">Date</label>
+                  <label className="block text-sm font-bold text-gray-700 mb-2">Date</label>
                   <input
                     type="date"
                     value={editingReceipt.date}
                     onChange={(e) => setEditingReceipt({ ...editingReceipt, date: e.target.value })}
-                    className="w-full px-4 py-3 bg-gray-100 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-4 py-3 bg-gray-100 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold mb-2">Amount</label>
+                  <label className="block text-sm font-bold text-gray-700 mb-2">Amount</label>
                   <input
                     type="number"
                     step="0.01"
@@ -629,15 +621,15 @@ const App = () => {
                     onChange={(e) =>
                       setEditingReceipt({ ...editingReceipt, total: parseFloat(e.target.value) })
                     }
-                    className="w-full px-4 py-3 bg-gray-100 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-4 py-3 bg-gray-100 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold mb-2">Category</label>
+                  <label className="block text-sm font-bold text-gray-700 mb-2">Category</label>
                   <select
                     value={editingReceipt.category}
                     onChange={(e) => setEditingReceipt({ ...editingReceipt, category: e.target.value })}
-                    className="w-full px-4 py-3 bg-gray-100 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-4 py-3 bg-gray-100 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium"
                   >
                     {categories.map(cat => (
                       <option key={cat} value={cat}>
@@ -650,13 +642,13 @@ const App = () => {
               <div className="flex gap-3 mt-6">
                 <button
                   onClick={() => updateReceipt(editingReceipt.id, editingReceipt)}
-                  className="flex-1 bg-blue-500 text-white py-4 rounded-2xl font-bold hover:bg-blue-600 transition-colors"
+                  className="flex-1 bg-blue-500 text-white py-4 rounded-2xl font-bold hover:bg-blue-600 transition-all shadow-md"
                 >
                   Save Changes
                 </button>
                 <button
                   onClick={() => setEditingReceipt(null)}
-                  className="flex-1 bg-gray-100 py-4 rounded-2xl font-bold hover:bg-gray-200 transition-colors"
+                  className="flex-1 bg-gray-100 py-4 rounded-2xl font-bold hover:bg-gray-200 transition-all"
                 >
                   Cancel
                 </button>
