@@ -272,12 +272,6 @@ const App = () => {
                   className="w-full pl-12 pr-4 pill-input"
                 />
               </div>
-              <div className="filter-pills">
-                <button className={`pill ${selectedCategory === 'all' ? 'pill-active' : ''}`} onClick={() => setSelectedCategory('all')}>All Receipts</button>
-                {categories.map(cat => (
-                  <button key={cat} className={`pill ${selectedCategory === cat ? 'pill-active' : ''}`} onClick={() => setSelectedCategory(cat)}>{cat}</button>
-                ))}
-              </div>
             </div>
           )}
         </div>
@@ -306,10 +300,11 @@ const App = () => {
                   <div className="tile-body flex gap-6">
                     {/* Thumbnail */}
                     <div 
-                      className="flex-shrink-0 w-24 h-32 bg-gradient-to-br from-neutral-200 to-neutral-300 rounded-lg overflow-hidden cursor-pointer hover:shadow-lg transition-all"
+                      className="flex-shrink-0 rounded-lg overflow-hidden cursor-pointer hover:shadow-lg transition-all" 
+                      style={{ width: '96px', height: '128px', minWidth: '96px' }}
                       onClick={() => setPreviewImage(receipt.image)}
                     >
-                      <img src={receipt.image} alt="Receipt" className="w-full h-full object-cover" />
+                      <img src={receipt.image} alt="Receipt" className="w-full h-full object-cover" style={{ width: '96px', height: '128px' }} />
                     </div>
 
                     {/* Details */}
@@ -385,6 +380,14 @@ const App = () => {
 
           {view === 'analytics' && (
             <div className="space-y-6 mt-6">
+              {/* Category Filters */}
+              <div className="filter-pills">
+                <button className={`pill ${selectedCategory === 'all' ? 'pill-active' : ''}`} onClick={() => setSelectedCategory('all')}>All Items</button>
+                {categories.map(cat => (
+                  <button key={cat} className={`pill ${selectedCategory === cat ? 'pill-active' : ''}`} onClick={() => setSelectedCategory(cat)}>{categoryIcons[cat]} {cat}</button>
+                ))}
+              </div>
+              
               {/* KPI Tiles */}
               <div className="grid grid-cols-4 gap-3">
                 <div className="kpi">
