@@ -187,10 +187,23 @@ const App = () => {
 
   const getFilteredReceipts = () => {
     return receipts.filter(receipt => {
-      const matchesCategory = selectedCategory === 'all' || receipt.category === selectedCategory;
       const matchesSearch = !searchTerm || receipt.merchant.toLowerCase().includes(searchTerm.toLowerCase());
-      return matchesCategory && matchesSearch;
+      return matchesSearch;
     });
+  };
+
+  const getFilteredItems = () => {
+    const items = [];
+    receipts.forEach(receipt => {
+      if (selectedCategory === 'all' || receipt.category === selectedCategory) {
+        if (Array.isArray(receipt.items)) {
+          receipt.items.forEach(item => {
+            items.push({ ...item, category: receipt.category, merchantName: receipt.merchant });
+          });
+        }
+      }
+    });
+    return items;
   };
 
   const getStats = () => {
@@ -215,38 +228,51 @@ const App = () => {
 
   const stats = getStats();
   const filteredReceipts = getFilteredReceipts();
+  const filteredItems = getFilteredItems();
+
+  const getItemStats = () => {
+    const byCategory = {};
+    categories.forEach(cat => byCategory[cat] = []);
+    filteredItems.forEach(item => {
+      if (!byCategory[item.category]) byCategory[item.category] = [];
+      byCategory[item.category].push(item);
+    });
+    const topItems = filteredItems.sort((a, b) => b.price - a.price).slice(0, 15);
+    const totalSpentOnItems = filteredItems.reduce((sum, i) => sum + i.price, 0);
+    return { byCategory, topItems, totalSpentOnItems, itemCount: filteredItems.length };
+  };
+  const itemStats = getItemStats();
 
   return (
     <div className="min-h-screen">
-      <div className="max-w-md mx-auto pb-24">
+      <div className="max-w-5xl mx-auto pb-24 px-4">
         {/* Header */}
-        <div className="bg-white/80 backdrop-blur-xl px-6 py-4 sticky top-0 z-10 shadow-lg border-b border-gray-200">
+        <div className="bg-white px-0 py-4 sticky top-0 z-10 shadow-lg border-b border-gray-200">
           <div className="flex items-center justify-between">
             <h1 className="text-2xl font-black text-gray-900">
               {view === 'list' ? 'Receipts' : 'Analytics'}
             </h1>
             {view === 'list' && (
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-bold text-gray-500">+ Add</span>
-                <label aria-label="Add receipt" className="cursor-pointer bg-gradient-to-r from-purple-500 to-pink-500 text-white w-12 h-12 rounded-2xl flex items-center justify-center hover:shadow-lg transition-all">
-                  <Plus size={24} strokeWidth={3} />
-                  <input type="file" accept="image/*" capture="environment" onChange={handleFileUpload} className="hidden" disabled={scanning} />
-                </label>
-              </div>
+              <label aria-label="Add receipt" className="cursor-pointer bg-gradient-to-r from-purple-500 to-pink-500 text-white w-12 h-12 rounded-2xl flex items-center justify-center hover:shadow-lg transition-all">
+                <Plus size={24} strokeWidth={3} />
+                <input type="file" accept="image/*" capture="environment" onChange={handleFileUpload} className="hidden" disabled={scanning} />
+              </label>
             )}
           </div>
           
           {view === 'list' && (
-            <div className="relative mt-3">
-              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
-              <input
-                type="text"
-                placeholder="Search receipts..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-12 pr-4 pill-input"
-              />
-              <div className="filter-pills mt-3">
+            <div className="mt-4 space-y-3">
+              <div className="relative">
+                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+                <input
+                  type="text"
+                  placeholder="Search"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-12 pr-4 pill-input"
+                />
+              </div>
+              <div className="filter-pills">
                 <button className={`pill ${selectedCategory === 'all' ? 'pill-active' : ''}`} onClick={() => setSelectedCategory('all')}>All</button>
                 {categories.map(cat => (
                   <button key={cat} className={`pill ${selectedCategory === cat ? 'pill-active' : ''}`} onClick={() => setSelectedCategory(cat)}>{cat}</button>
@@ -257,7 +283,7 @@ const App = () => {
         </div>
 
         {/* Content */}
-        <div className="px-6">
+        <div className="px-0">
           {view === 'list' && (
             <div className="space-y-4 mt-6">
               {scanning && (
@@ -362,14 +388,18 @@ const App = () => {
           {view === 'analytics' && (
             <div className="space-y-6 mt-6">
               {/* KPI Tiles */}
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-4 gap-3">
                 <div className="kpi">
-                  <span className="text-xs font-bold text-gray-500">Total</span>
-                  <span className="text-2xl font-black text-gray-900">${stats.total.toFixed(2)}</span>
+                  <span className="text-xs font-bold text-gray-500">Items</span>
+                  <span className="text-2xl font-black text-gray-900">{itemStats.itemCount}</span>
                 </div>
                 <div className="kpi">
-                  <span className="text-xs font-bold text-gray-500">Avg</span>
-                  <span className="text-2xl font-black text-gray-900">${stats.count > 0 ? (stats.total / stats.count).toFixed(2) : '0.00'}</span>
+                  <span className="text-xs font-bold text-gray-500">Spent</span>
+                  <span className="text-2xl font-black text-gray-900">${itemStats.totalSpentOnItems.toFixed(2)}</span>
+                </div>
+                <div className="kpi">
+                  <span className="text-xs font-bold text-gray-500">Avg/Item</span>
+                  <span className="text-2xl font-black text-gray-900">${itemStats.itemCount > 0 ? (itemStats.totalSpentOnItems / itemStats.itemCount).toFixed(2) : '0.00'}</span>
                 </div>
                 <div className="kpi">
                   <span className="text-xs font-bold text-gray-500">Receipts</span>
@@ -377,104 +407,71 @@ const App = () => {
                 </div>
               </div>
 
-              {/* Distribution & Trend Panel */}
+              {/* Top Items Chart */}
               <div className="tile">
                 <div className="tile-header">
-                  <h3 className="section-title">Distribution & Trend</h3>
-                  <span className={`badge ${stats.percentChange >= 0 ? 'badge-green' : 'badge-orange'}`}>
-                    {stats.percentChange >= 0 ? <ArrowUp size={14} /> : <ArrowDown size={14} />}
-                    {Math.abs(stats.percentChange).toFixed(1)}%
-                  </span>
+                  <h3 className="section-title">Top Items</h3>
                 </div>
                 <div className="tile-body">
-                  <div className="grid grid-cols-3 gap-6 items-center">
-                    <div className="col-span-1 flex items-center justify-center">
-                      <div className="relative w-32 h-32">
-                        {stats.total > 0 && Object.values(stats.byCategory).some(v => v > 0) ? (
-                          <svg viewBox="0 0 100 100" className="transform -rotate-90">
-                            {Object.entries(stats.byCategory)
-                              .filter(([_, amount]) => amount > 0)
-                              .reduce((acc, [category, amount]) => {
-                                const pct = stats.total > 0 ? (amount / stats.total) * 100 : 0;
-                                const prev = acc.length ? acc[acc.length - 1].cumulative : 0;
-                                acc.push({ category, percentage: pct, cumulative: prev + pct, color: categoryColors[category].hex });
-                                return acc;
-                              }, [])
-                              .map((seg, i) => {
-                                const dash = `${seg.percentage} ${100 - seg.percentage}`;
-                                const offset = 25 - (i > 0 ? seg.cumulative - seg.percentage : 0);
-                                return (
-                                  <circle key={seg.category} cx="50" cy="50" r="15.9" fill="none" stroke={seg.color} strokeWidth="12" strokeDasharray={dash} strokeDashoffset={offset} />
-                                );
-                              })}
-                          </svg>
-                        ) : (
-                          <div className="w-24 h-24 rounded-full bg-gray-100" />
-                        )}
-                        <div className="absolute inset-0 flex items-center justify-center">
-                          <p className="text-sm font-bold text-gray-700">{stats.count} receipts</p>
-                        </div>
-                      </div>
+                  {itemStats.topItems.length > 0 ? (
+                    <div className="list-bordered">
+                      {itemStats.topItems.map((item, idx) => {
+                        const maxPrice = itemStats.topItems[0].price;
+                        const percentage = maxPrice > 0 ? (item.price / maxPrice) * 100 : 0;
+                        return (
+                          <div key={idx} className="list-item">
+                            <div className="flex-1">
+                              <p className="text-sm font-semibold text-gray-900 truncate">{item.name}</p>
+                              <p className="text-xs text-gray-500">{item.merchantName}</p>
+                            </div>
+                            <div className="flex items-center gap-4">
+                              <div className="w-24 bg-gray-100 rounded-full h-2 overflow-hidden">
+                                <div className="bg-purple-500 h-2 rounded-full" style={{ width: `${percentage}%` }}></div>
+                              </div>
+                              <span className="text-sm font-bold text-gray-900 w-16 text-right">${item.price.toFixed(2)}</span>
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
-                    <div className="col-span-2">
-                      <div className="h-24 relative">
-                        <svg viewBox="0 0 200 100" className="w-full h-full">
-                          <path d="M0 70 C 30 40, 60 80, 90 50 S 150 60, 200 40" stroke="#334155" strokeWidth="2.5" fill="none" />
-                        </svg>
-                        <div className="absolute inset-x-0 bottom-0 h-px bg-gray-200"></div>
-                      </div>
-                      <div className="flex justify-between mt-2 text-xs text-gray-500 font-semibold">
-                        <span>1</span>
-                        <span>2</span>
-                        <span>3</span>
-                        <span>4</span>
-                        <span>5</span>
-                        <span>6</span>
-                        <span>7</span>
-                      </div>
-                    </div>
-                  </div>
+                  ) : (
+                    <p className="text-center text-gray-500 py-8">No items to display</p>
+                  )}
                 </div>
               </div>
 
-              {/* Category Breakdown Panel */}
+              {/* Category Distribution */}
               <div className="tile">
                 <div className="tile-header">
-                  <h3 className="section-title">Category Breakdown</h3>
+                  <h3 className="section-title">By Category</h3>
                 </div>
-                <div className="tile-body space-y-4">
-                  {Object.entries(stats.byCategory)
-                    .filter(([_, amount]) => amount > 0)
-                    .sort((a, b) => b[1] - a[1])
-                    .map(([category, amount]) => {
-                      const percentage = stats.total > 0 ? (amount / stats.total) * 100 : 0;
-                      return (
-                        <div key={category} className="space-y-2">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                              <div className={`w-10 h-10 ${categoryColors[category].light} rounded-2xl flex items-center justify-center text-lg`}>
-                                {categoryIcons[category]}
+                <div className="tile-body">
+                  {Object.entries(itemStats.byCategory).some(([_, items]) => items.length > 0) ? (
+                    <div className="list-bordered">
+                      {Object.entries(itemStats.byCategory)
+                        .filter(([_, items]) => items.length > 0)
+                        .sort((a, b) => b[1].length - a[1].length)
+                        .map(([category, items]) => {
+                          const categoryTotal = items.reduce((sum, i) => sum + i.price, 0);
+                          const percentage = itemStats.totalSpentOnItems > 0 ? (categoryTotal / itemStats.totalSpentOnItems) * 100 : 0;
+                          return (
+                            <div key={category} className="list-item">
+                              <div className="flex-1">
+                                <p className="text-sm font-semibold text-gray-900">{category}</p>
+                                <p className="text-xs text-gray-500">{items.length} items</p>
                               </div>
-                              <span className="font-bold text-gray-900">{category}</span>
+                              <div className="flex items-center gap-4">
+                                <div className="w-24 bg-gray-100 rounded-full h-2 overflow-hidden">
+                                  <div className={`h-2 rounded-full ${categoryColors[category].bg}`} style={{ width: `${percentage}%` }}></div>
+                                </div>
+                                <span className="text-sm font-bold text-gray-900 w-20 text-right">${categoryTotal.toFixed(2)}</span>
+                              </div>
                             </div>
-                            <div className="text-right">
-                              <p className="font-black text-gray-900">${amount.toFixed(0)}</p>
-                              <p className="text-xs text-gray-500 font-bold">{percentage.toFixed(0)}%</p>
-                            </div>
-                          </div>
-                          <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
-                            <div className={`h-full ${categoryColors[category].bg} rounded-full transition-all duration-500 shadow-sm`} style={{ width: `${percentage}%` }}></div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  {Object.values(stats.byCategory).every(v => v === 0) && (
-                    <div className="text-center py-8">
-                      <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                        <PieChart size={32} className="text-gray-300" />
-                      </div>
-                      <p className="text-gray-500 font-semibold">No data yet. Start scanning!</p>
+                          );
+                        })}
                     </div>
+                  ) : (
+                    <p className="text-center text-gray-500 py-8">No data</p>
                   )}
                 </div>
               </div>
@@ -484,7 +481,7 @@ const App = () => {
 
         {/* Bottom Nav */}
         <div className="fixed bottom-0 left-0 right-0 blur-nav">
-          <div className="max-w-md mx-auto px-6 py-3 flex justify-around">
+          <div className="max-w-5xl mx-auto px-4 py-3 flex justify-around">
             <button onClick={() => setView('list')} className={`flex flex-col items-center gap-1 py-2 ${view === 'list' ? 'text-purple-500' : 'text-gray-400'}`}>
               <Receipt size={26} strokeWidth={2.5} />
               <span className="text-xs font-black">Receipts</span>
