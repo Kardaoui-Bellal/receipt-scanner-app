@@ -204,8 +204,9 @@ const App = () => {
               {view === 'list' ? 'My Receipts' : 'Analytics'}
             </h1>
             {view === 'list' && (
-              <div className="flex gap-3">
-                <label className="cursor-pointer bg-gradient-to-r from-purple-500 to-pink-500 text-white w-12 h-12 rounded-2xl flex items-center justify-center hover:shadow-lg transition-all">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-bold text-gray-500">+ Add</span>
+                <label aria-label="Add receipt" className="cursor-pointer bg-gradient-to-r from-purple-500 to-pink-500 text-white w-12 h-12 rounded-2xl flex items-center justify-center hover:shadow-lg transition-all">
                   <Plus size={24} strokeWidth={3} />
                   <input type="file" accept="image/*" capture="environment" onChange={handleFileUpload} className="hidden" disabled={scanning} />
                 </label>
