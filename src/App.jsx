@@ -86,7 +86,7 @@ const App = () => {
       });
 
       const text = result.data.text;
-      const lines = text.split('\n').filter(line => line.trim().length > 2);
+      const lines = text.split('\n').map(l => l.trim()).filter(line => line.length > 2);
       
       let merchant = 'Unknown Store';
       for (let i = 0; i < Math.min(5, lines.length); i++) {
@@ -100,6 +100,27 @@ const App = () => {
       let date = new Date().toISOString().split('T')[0];
       let total = 0;
       const amountRegex = /\$?\s*(\d+[,.]?\d*\.?\d{2})/g;
+      const singleAmountRegex = /\$?\s*(\d+(?:[,.]\d{2})?)/;
+
+      // Extract probable line items: name + price on line
+      const items = [];
+      lines.forEach(line => {
+        // skip lines that look like totals or headers
+        const lower = line.toLowerCase();
+        const isTotaly = lower.includes('total') || lower.includes('subtotal') || lower.includes('tax');
+        if (isTotaly) return;
+        const m = line.match(singleAmountRegex);
+        if (m) {
+          const price = parseFloat(m[1].replace(/[,$]/g, ''));
+          if (!isNaN(price) && price > 0) {
+            // name is line without price token
+            const name = line.replace(m[0], '').replace(/\s{2,}/g, ' ').trim();
+            if (name && name.length > 1 && name.length < 50) {
+              items.push({ name, price });
+            }
+          }
+        }
+      });
       
       for (const line of lines) {
         if (line.toLowerCase().includes('total')) {
@@ -133,6 +154,7 @@ const App = () => {
         category,
         image: base64Image,
         itemCount,
+        items,
         addedDate: new Date().toISOString()
       };
 
@@ -288,7 +310,27 @@ const App = () => {
                           {receipt.category}
                         </span>
                         <span className="text-xs text-gray-500 font-semibold">{receipt.itemCount?.toLocaleString()}</span>
+                        {Array.isArray(receipt.items) && receipt.items.length > 0 && (
+                          <button onClick={() => setExpandedReceipt(expandedReceipt === receipt.id ? null : receipt.id)} className="text-xs font-bold text-gray-500 underline ml-auto">
+                            {expandedReceipt === receipt.id ? 'Hide items' : 'View items'}
+                          </button>
+                        )}
                       </div>
+                      {expandedReceipt === receipt.id && Array.isArray(receipt.items) && receipt.items.length > 0 && (
+                        <div className="bg-gray-50 rounded-2xl p-3 border border-gray-100">
+                          <ul className="space-y-2">
+                            {receipt.items.slice(0, 6).map((it, idx) => (
+                              <li key={idx} className="flex items-center justify-between">
+                                <span className="text-sm font-medium text-gray-700 truncate">{it.name}</span>
+                                <span className="text-sm font-bold text-gray-900">${Number(it.price).toFixed(2)}</span>
+                              </li>
+                            ))}
+                          </ul>
+                          {receipt.items.length > 6 && (
+                            <p className="text-xs text-gray-500 mt-2">+ {receipt.items.length - 6} more</p>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -319,8 +361,9 @@ const App = () => {
               <div className="soft-card p-8 relative overflow-hidden">
                 <div className="flex items-center justify-between mb-2">
                   <p className="text-sm font-bold text-gray-500">Total Spent</p>
-                  <span className="text-green-600 font-bold text-sm flex items-center gap-1">
-                    <ArrowUp size={16} /> {Math.abs(stats.percentChange).toFixed(1)}%
+                  <span className={`font-bold text-sm flex items-center gap-1 ${stats.percentChange >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    {stats.percentChange >= 0 ? <ArrowUp size={16} /> : <ArrowDown size={16} />}
+                    {Math.abs(stats.percentChange).toFixed(1)}%
                   </span>
                 </div>
                 <p className="text-5xl font-black text-gray-900">${stats.total.toFixed(2)}</p>
@@ -332,23 +375,27 @@ const App = () => {
                   {/* Donut */}
                   <div className="col-span-1 flex items-center justify-center">
                     <div className="relative w-32 h-32">
-                      <svg viewBox="0 0 100 100" className="transform -rotate-90">
-                        {Object.entries(stats.byCategory)
-                          .filter(([_, amount]) => amount > 0)
-                          .reduce((acc, [category, amount]) => {
-                            const pct = stats.total > 0 ? (amount / stats.total) * 100 : 0;
-                            const prev = acc.length ? acc[acc.length - 1].cumulative : 0;
-                            acc.push({ category, percentage: pct, cumulative: prev + pct, color: categoryColors[category].hex });
-                            return acc;
-                          }, [])
-                          .map((seg, i) => {
-                            const dash = `${seg.percentage} ${100 - seg.percentage}`;
-                            const offset = 25 - (i > 0 ? seg.cumulative - seg.percentage : 0);
-                            return (
-                              <circle key={seg.category} cx="50" cy="50" r="15.9" fill="none" stroke={seg.color} strokeWidth="12" strokeDasharray={dash} strokeDashoffset={offset} />
-                            );
-                          })}
-                      </svg>
+                      {stats.total > 0 && Object.values(stats.byCategory).some(v => v > 0) ? (
+                        <svg viewBox="0 0 100 100" className="transform -rotate-90">
+                          {Object.entries(stats.byCategory)
+                            .filter(([_, amount]) => amount > 0)
+                            .reduce((acc, [category, amount]) => {
+                              const pct = stats.total > 0 ? (amount / stats.total) * 100 : 0;
+                              const prev = acc.length ? acc[acc.length - 1].cumulative : 0;
+                              acc.push({ category, percentage: pct, cumulative: prev + pct, color: categoryColors[category].hex });
+                              return acc;
+                            }, [])
+                            .map((seg, i) => {
+                              const dash = `${seg.percentage} ${100 - seg.percentage}`;
+                              const offset = 25 - (i > 0 ? seg.cumulative - seg.percentage : 0);
+                              return (
+                                <circle key={seg.category} cx="50" cy="50" r="15.9" fill="none" stroke={seg.color} strokeWidth="12" strokeDasharray={dash} strokeDashoffset={offset} />
+                              );
+                            })}
+                        </svg>
+                      ) : (
+                        <div className="w-24 h-24 rounded-full bg-gray-100" />
+                      )}
                       <div className="absolute inset-0 flex items-center justify-center">
                         <p className="text-sm font-bold text-gray-700">{stats.count} receipts</p>
                       </div>
