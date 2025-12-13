@@ -32,11 +32,32 @@ const App = () => {
   };
 
   const merchantCategories = {
+    // Food & Restaurants
     'walmart': 'Food', 'target': 'Food', 'kroger': 'Food', 'carrefour': 'Food',
-    'mcdonald': 'Food', 'starbucks': 'Food',
-    'uber': 'Transport', 'lyft': 'Transport', 'gas': 'Transport',
-    'amazon': 'Shopping', 'ikea': 'Shopping',
-    'electric': 'Bills', 'water': 'Bills'
+    'mcdonald': 'Food', 'starbucks': 'Food', 'costco': 'Food', 'whole foods': 'Food',
+    'trader joe': 'Food', 'safeway': 'Food', 'albertson': 'Food', 'publix': 'Food',
+    'restaurant': 'Food', 'cafe': 'Food', 'pizza': 'Food', 'burger': 'Food',
+    'chicken': 'Food', 'chipotle': 'Food', 'panera': 'Food', 'subway': 'Food',
+    'taco': 'Food', 'deli': 'Food', 'grocery': 'Food', 'market': 'Food',
+    'supermarket': 'Food', 'bakery': 'Food',
+    // Transport
+    'uber': 'Transport', 'lyft': 'Transport', 'gas': 'Transport', 'shell': 'Transport',
+    'chevron': 'Transport', 'bp': 'Transport', 'exxon': 'Transport', 'parking': 'Transport',
+    'taxi': 'Transport', 'airline': 'Transport', 'airport': 'Transport', 'train': 'Transport',
+    'bus': 'Transport', 'metro': 'Transport', 'transit': 'Transport',
+    // Shopping
+    'amazon': 'Shopping', 'ikea': 'Shopping', 'mall': 'Shopping', 'store': 'Shopping',
+    'shop': 'Shopping', 'fashion': 'Shopping', 'clothing': 'Shopping', 'apparel': 'Shopping',
+    'nike': 'Shopping', 'adidas': 'Shopping', 'zara': 'Shopping', 'h&m': 'Shopping',
+    'gap': 'Shopping', 'old navy': 'Shopping', 'macy': 'Shopping', 'nordstrom': 'Shopping',
+    'best buy': 'Shopping', 'walmart': 'Shopping', 'costco': 'Shopping', 'retail': 'Shopping',
+    'shoe': 'Shopping', 'boots': 'Shopping', 'jewelry': 'Shopping',
+    // Bills & Utilities
+    'electric': 'Bills', 'water': 'Bills', 'gas company': 'Bills', 'utility': 'Bills',
+    'phone': 'Bills', 'internet': 'Bills', 'verizon': 'Bills', 'at&t': 'Bills',
+    'comcast': 'Bills', 'spectrum': 'Bills', 'insurance': 'Bills', 'hospital': 'Bills',
+    'doctor': 'Bills', 'clinic': 'Bills', 'pharmacy': 'Bills', 'rent': 'Bills',
+    'mortgage': 'Bills', 'power': 'Bills', 'electric': 'Bills'
   };
 
   useEffect(() => {
@@ -58,9 +79,22 @@ const App = () => {
   };
 
   const categorizeByMerchant = (merchantName) => {
-    const lowerMerchant = merchantName.toLowerCase();
+    const lowerMerchant = merchantName.toLowerCase().replace(/[^a-z0-9\s]/g, '');
     for (const [keyword, category] of Object.entries(merchantCategories)) {
-      if (lowerMerchant.includes(keyword)) return category;
+      // Check for exact word match or substring match
+      if (lowerMerchant.includes(keyword.replace(/[^a-z0-9\s]/g, ''))) {
+        return category;
+      }
+      // Also check individual words
+      const words = lowerMerchant.split(/\s+/);
+      const keywordWords = keyword.split(/\s+/);
+      for (const word of words) {
+        for (const kword of keywordWords) {
+          if (word.includes(kword) && kword.length > 2) {
+            return category;
+          }
+        }
+      }
     }
     return 'Other';
   };
